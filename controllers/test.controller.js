@@ -852,47 +852,6 @@ export const getTestReport = async (req, res) => {
 		questions.forEach(q => {
 			questionToMateri[q._id.toString()] = q.id_materi?.toString()
 		})
-
-		const materiMap = {}
-		materies.forEach(m => {
-			materiMap[m._id.toString()] = m
-		})
-
-                const materiResults = {}
-                for (const sess of sessionByParticipant.values()) {
-                        const cats = sess.payload || []
-                        for (const q of sess.question_done || []) {
-                                const qId = q.question_data?.id_question?.toString()
-                                const mId = questionToMateri[qId]
-                                if (!mId) continue
-
-                                const levelName =
-                                        cats.find(cat => cat.level === q.level)?.name || `Level ${q.level || 'unknown'}`
-
-                                if (!materiResults[mId]) {
-                                        materiResults[mId] = {
-                                                id_materi: mId,
-                                                materi_data: materiMap[mId] || null,
-                                                correct: 0,
-                                                incorrect: 0,
-                                                levels: {},
-                                        }
-                                }
-
-                                if (!materiResults[mId].levels[levelName]) {
-                                        materiResults[mId].levels[levelName] = { correct: 0, incorrect: 0 }
-                                }
-
-                                if (q.isCorrect) {
-                                        materiResults[mId].correct++
-                                        materiResults[mId].levels[levelName].correct++
-                                } else if (q.answer !== null) {
-                                        materiResults[mId].incorrect++
-                                        materiResults[mId].levels[levelName].incorrect++
-                                }
-                        }
-                }
-
 		const materiResultArr = Object.values(materiResults)
 
 		const responseData = {
