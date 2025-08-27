@@ -13,11 +13,12 @@ const {
 	deleteTest,
 	startTest,
 	getUserTestSessions,
-	getSoalData,
-	getTestReport,
-	updateTestAccess,
-	getUserSessions,
-	getParticipantsByInstance,
+        getSoalData,
+        getTestReport,
+        getMateriScores,
+        updateTestAccess,
+        getUserSessions,
+        getParticipantsByInstance,
 } = await import('../controllers/test.controller.js')
 const { getTestSessionData, getCurrentSession, getQuestion, answerQuestion, setAsCompleted } =
 	await import('../controllers/test.controller.js')
@@ -49,4 +50,5 @@ router.post('/user/sessions', webmasterOnly, getUserTestSessions)
 router.post('/participants/byinstance/get', webmasterOnly, getParticipantsByInstance)
 router.post('/get/soal', webmasterOnly, getSoalData)
 router.post('/report/get', webmasterOnly, getTestReport)
+router.post('/report/materi', webmasterOnly, getMateriScores)
 export default router
