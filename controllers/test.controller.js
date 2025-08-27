@@ -852,36 +852,6 @@ export const getTestReport = async (req, res) => {
 		questions.forEach(q => {
 			questionToMateri[q._id.toString()] = q.id_materi?.toString()
 		})
-
-		const materiMap = {}
-		materies.forEach(m => {
-			materiMap[m._id.toString()] = m
-		})
-
-		const materiResults = {}
-		for (const sess of testSessions) {
-			for (const q of sess.question_done || []) {
-				const qId = q.question_data?.id_question?.toString()
-				const mId = questionToMateri[qId]
-				if (!mId) continue
-
-				if (!materiResults[mId]) {
-					materiResults[mId] = {
-						id_materi: mId,
-						materi_data: materiMap[mId] || null,
-						correct: 0,
-						incorrect: 0,
-					}
-				}
-
-				if (q.isCorrect) {
-					materiResults[mId].correct++
-				} else if (q.answer !== null) {
-					materiResults[mId].incorrect++
-				}
-			}
-		}
-
 		const materiResultArr = Object.values(materiResults)
 
 		const responseData = {
@@ -900,6 +870,62 @@ export const getTestReport = async (req, res) => {
 		console.error('Error fetching test report:', err)
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
 	}
+}
+
+export const getMateriScores = async (req, res) => {
+        try {
+                const { id_test } = req.body
+
+                const testSessions = await TestSession.find({ id_test }).lean()
+                if (!testSessions.length) {
+                        return res
+                                .status(404)
+                                .json({ status: 404, message: 'Tidak ada sesi test ditemukan untuk test ini' })
+                }
+
+                const questions = await Question.find().select('_id id_materi').lean()
+                const questionToMateri = {}
+                questions.forEach(q => {
+                        questionToMateri[q._id.toString()] = q.id_materi?.toString()
+                })
+
+                const materies = await Materi.find().select('_id name').lean()
+                const materiMap = {}
+                materies.forEach(m => {
+                        materiMap[m._id.toString()] = m.name
+                })
+
+                const scoreMap = {}
+                for (const sess of testSessions) {
+                        for (const q of sess.question_done || []) {
+                                const qId = q.question_data?.id_question?.toString()
+                                const mId = questionToMateri[qId]
+                                if (!mId) continue
+
+                                if (!scoreMap[mId]) {
+                                        scoreMap[mId] = {
+                                                materi: materiMap[mId] || 'Unknown',
+                                                correct: 0,
+                                                incorrect: 0,
+                                        }
+                                }
+
+                                if (q.isCorrect) {
+                                        scoreMap[mId].correct++
+                                } else if (q.answered) {
+                                        scoreMap[mId].incorrect++
+                                }
+                        }
+                }
+
+                const scoreArr = Object.values(scoreMap)
+                return res
+                        .status(200)
+                        .json({ status: 200, message: 'ok', data: { score: scoreArr } })
+        } catch (error) {
+                console.error('Error fetching materi scores:', error)
+                return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
+        }
 }
 
 export const getParticipantsByInstance = async (req, res) => {
