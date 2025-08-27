@@ -844,28 +844,61 @@ export const getTestReport = async (req, res) => {
 			}
 		}
 
-		//Get results by materi
-		const mMateries = await Materi.find()
-		const mQuestions = await Question.find()
-    const mSessions = await TestSession
-		let mMateriesQResult = []
+		// Get results by materi
+		const materies = await Materi.find().lean()
+		const questions = await Question.find().select('_id id_materi').lean()
 
-		for (const mtr of mMateries) {
-			const mIdMateri = mtr._id.toString()
-			const mQuestionMateri = mQuestions.filter(q => q.id_materi.toString() === mIdMateri)
-			mMateriesQResult.push({
-				id_materi: mIdMateri,
-				materi_data: mtr,
-				questions: mQuestionMateri,
-			})
+		const questionToMateri = {}
+		questions.forEach(q => {
+			questionToMateri[q._id.toString()] = q.id_materi?.toString()
+		})
+
+		const materiMap = {}
+		materies.forEach(m => {
+			materiMap[m._id.toString()] = m
+		})
+
+		const materiResults = {}
+		for (const sess of testSessions) {
+			for (const q of sess.question_done || []) {
+				const qId = q.question_data?.id_question?.toString()
+				const mId = questionToMateri[qId]
+				if (!mId) continue
+
+				const level = q.level || 'unknown'
+
+				if (!materiResults[mId]) {
+					materiResults[mId] = {
+						id_materi: mId,
+						materi_data: materiMap[mId] || null,
+						correct: 0,
+						incorrect: 0,
+						levels: {},
+					}
+				}
+
+				if (!materiResults[mId].levels[level]) {
+					materiResults[mId].levels[level] = { correct: 0, incorrect: 0 }
+				}
+
+				if (q.isCorrect) {
+					materiResults[mId].correct++
+					materiResults[mId].levels[level].correct++
+				} else if (q.answer !== null) {
+					materiResults[mId].incorrect++
+					materiResults[mId].levels[level].incorrect++
+				}
+			}
 		}
 
+		const materiResultArr = Object.values(materiResults)
 
 		const responseData = {
 			participants: partProfile,
 			instances: instances,
 			result: result,
 			instanceResults: [],
+			materiResults: materiResultArr,
 		}
 
 		Object.keys(instanceResults).forEach(instName => {
