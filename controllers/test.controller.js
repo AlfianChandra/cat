@@ -864,9 +864,7 @@ export const getTestReport = async (req, res) => {
 				const qId = q.question_data?.id_question?.toString()
 				const mId = questionToMateri[qId]
 				if (!mId) continue
-
 				const level = q.level || 'unknown'
-
 				if (!materiResults[mId]) {
 					materiResults[mId] = {
 						id_materi: mId,
@@ -887,6 +885,15 @@ export const getTestReport = async (req, res) => {
 				} else if (q.answer !== null) {
 					materiResults[mId].incorrect++
 					materiResults[mId].levels[level].incorrect++
+
+					}
+				}
+
+				if (q.isCorrect) {
+					materiResults[mId].correct++
+				} else if (q.answer !== null) {
+					materiResults[mId].incorrect++
+
 				}
 			}
 		}
