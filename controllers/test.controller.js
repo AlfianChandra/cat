@@ -864,34 +864,21 @@ export const getTestReport = async (req, res) => {
 				const qId = q.question_data?.id_question?.toString()
 				const mId = questionToMateri[qId]
 				if (!mId) continue
-				const level = q.level || 'unknown'
+
 				if (!materiResults[mId]) {
 					materiResults[mId] = {
 						id_materi: mId,
 						materi_data: materiMap[mId] || null,
 						correct: 0,
 						incorrect: 0,
-						levels: {},
 					}
-				}
-
-				if (!materiResults[mId].levels[level]) {
-					materiResults[mId].levels[level] = { correct: 0, incorrect: 0 }
 				}
 
 				if (q.isCorrect) {
 					materiResults[mId].correct++
-					materiResults[mId].levels[level].correct++
 				} else if (q.answer !== null) {
 					materiResults[mId].incorrect++
-					materiResults[mId].levels[level].incorrect++
 				}
-			}
-
-			if (q.isCorrect) {
-				materiResults[mId].correct++
-			} else if (q.answer !== null) {
-				materiResults[mId].incorrect++
 			}
 		}
 
