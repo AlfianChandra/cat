@@ -556,6 +556,16 @@ export const answerQuestion = async (req, res) => {
 			)
 		}
 
+		// Helper untuk mencari level berikutnya dengan soal
+		const findLevelWithQuestion = (start, step) => {
+			let lvl = start
+			while (lvl >= 1 && lvl <= levelCount) {
+				if (hasQuestion(lvl, nextQuestion)) return lvl
+				lvl += step
+			}
+			return null
+		}
+
 		// 10. Tentukan level selanjutnya berdasarkan logic yang baru
 		const idTest = testSession.id_test
 		const test = await Test.findById(idTest)
@@ -565,39 +575,44 @@ export const answerQuestion = async (req, res) => {
 
 		let nextLevel = current_level
 
-		if (isCorrect) {
-			// Jawaban benar: coba naik 1 level
-			let targetLevel = current_level + 1
-
-			// Cek dari level target sampai level maksimal, cari yang ada soalnya
-			while (targetLevel <= levelCount) {
-				if (hasQuestion(targetLevel, nextQuestion)) {
-					nextLevel = targetLevel
-					break
+		if (current_level === 1) {
+			if (isCorrect) {
+				const lvl = findLevelWithQuestion(current_level + 1, 1)
+				if (lvl) nextLevel = lvl
+			} else {
+				if (!hasQuestion(current_level, nextQuestion)) {
+					const lvl = findLevelWithQuestion(current_level + 1, 1)
+					if (lvl) nextLevel = lvl
 				}
-				targetLevel++
 			}
-
-			// Kalau ga ada soal di level yang lebih tinggi, tetap di level sekarang
-			// (tapi ini sebenernya edge case, harusnya ga terjadi)
+		} else if (current_level === levelCount) {
+			if (isCorrect) {
+				if (!hasQuestion(current_level, nextQuestion)) {
+					const lvl = findLevelWithQuestion(current_level - 1, -1)
+					if (lvl) nextLevel = lvl
+				}
+			} else {
+				let lvl = findLevelWithQuestion(current_level - 1, -1)
+				if (lvl !== null) {
+					nextLevel = lvl
+				} else {
+					lvl = findLevelWithQuestion(1, 1)
+					if (lvl !== null) nextLevel = lvl
+				}
+			}
 		} else {
-			// Jawaban salah: turunin level kalau bukan di level 1
-			if (current_level > 1) {
-				let targetLevel = current_level - 1
-
-				// Cek dari level target sampai level 1, cari yang ada soalnya
-				while (targetLevel >= 1) {
-					if (hasQuestion(targetLevel, nextQuestion)) {
-						nextLevel = targetLevel
-						break
-					}
-					targetLevel--
+			if (isCorrect) {
+				const lvl = findLevelWithQuestion(current_level + 1, 1)
+				if (lvl) nextLevel = lvl
+			} else {
+				let lvl = findLevelWithQuestion(current_level - 1, -1)
+				if (lvl !== null) {
+					nextLevel = lvl
+				} else {
+					lvl = findLevelWithQuestion(current_level + 1, 1)
+					if (lvl !== null) nextLevel = lvl
 				}
-
-				// Kalau ga ada soal di level yang lebih rendah juga, tetap di level sekarang
-				// (ini juga edge case)
 			}
-			// Kalau udah di level 1 dan salah, tetap di level 1
 		}
 
 		let response = {
