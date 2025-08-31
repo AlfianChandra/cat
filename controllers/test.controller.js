@@ -1052,9 +1052,37 @@ export const getParticipantsByInstance = async (req, res) => {
 			})
 		})
 
+		let result = {}
+		const categories = userSessions[0]?.payload || []
+		for (const cat of categories) {
+			const name = cat.name || `Level ${cat.level}`
+			result[name] = { correct: 0, incorrect: 0, indicator_name: name }
+		}
+		for (const sess of userSessions) {
+			const cats = sess.payload || []
+			for (const q of sess.question_done || []) {
+				const level = q.level
+				const name = cats.find(cat => cat.level === level)?.name || `Level ${level}`
+				if (!result[name]) {
+					result[name] = {
+						correct: q.isCorrect ? 1 : 0,
+						incorrect: !q.isCorrect && q.answer !== null ? 1 : 0,
+						indicator_name: name,
+					}
+				} else {
+					if (q.isCorrect) {
+						result[name].correct++
+					} else if (q.answer !== null) {
+						result[name].incorrect++
+					}
+				}
+			}
+		}
+
 		const finalResponse = {
 			data: response,
 			total: total,
+			result: result,
 		}
 		return res.status(200).json({ status: 200, message: 'ok', data: finalResponse })
 	} catch (error) {
