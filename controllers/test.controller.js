@@ -545,71 +545,76 @@ export const answerQuestion = async (req, res) => {
 			testSession.question_done[questionIndex].level = current_level || null
 		}
 		testSession.markModified('question_done')
-		// 8. Save semua perubahan sekali aja
+
+		// 8. Save perubahan sebelum menentukan level selanjutnya
 		await testSession.save()
 
-		let response = {
-			current_level: current_level,
-			current_question: current_question,
-			isEnded: false,
+		// 9. Helper function untuk cek apakah soal ada di level dan nomor tertentu
+		const hasQuestion = (level, questionNo) => {
+			return testSession.payload.some(
+				p => p.level === level && p.questions.some(q => q.no === questionNo),
+			)
 		}
 
+		// 10. Tentukan level selanjutnya berdasarkan logic yang baru
 		const idTest = testSession.id_test
 		const test = await Test.findById(idTest)
 		const levelCount = test.questions.length
 		const soalCount = testSession.question_done.length
-		if (levelCount > 1) {
-			if (current_level < levelCount) {
-				if (isCorrect) {
-					response['current_level'] = current_level + 1
-				} else {
-					if (current_level > 1) {
-						//Lower level if not correct and not on first level, but check in the payload if the next question is exist
-						const questionExists = testSession.payload.some(
-							p =>
-								p.level === current_level - 1 &&
-								p.questions.some(q => q.no === current_question + 1),
-						)
-						if (questionExists) {
-							response['current_level'] = current_level - 1
-						} else {
-							response['current_level'] = current_level
-						}
-					} else {
-						//Check if level 1's question is exist in the payload
-						const questionExists = testSession.payload.some(
-							p => p.level === 1 && p.questions.some(q => q.no === current_question + 1),
-						)
-						if (!questionExists) {
-							response['current_level'] = current_level + 1
-						}
-					}
+		const nextQuestion = current_question + 1
+
+		let nextLevel = current_level
+
+		if (isCorrect) {
+			// Jawaban benar: coba naik 1 level
+			let targetLevel = current_level + 1
+
+			// Cek dari level target sampai level maksimal, cari yang ada soalnya
+			while (targetLevel <= levelCount) {
+				if (hasQuestion(targetLevel, nextQuestion)) {
+					nextLevel = targetLevel
+					break
 				}
-			} else if (current_level === levelCount) {
-				if (!isCorrect) {
-					//user answer is incorrect at the top level, lower the level but check in the payload if the next question is exist
-					const questionExists = testSession.payload.some(
-						p =>
-							p.level === current_level - 1 && p.questions.some(q => q.no === current_question + 1),
-					)
-					if (questionExists) {
-						response['current_level'] = current_level - 1
-					} else {
-						response['current_level'] = current_level
-					}
-				}
+				targetLevel++
 			}
+
+			// Kalau ga ada soal di level yang lebih tinggi, tetap di level sekarang
+			// (tapi ini sebenernya edge case, harusnya ga terjadi)
 		} else {
-			response['current_level'] = 1 // Reset to level 1
+			// Jawaban salah: turunin level kalau bukan di level 1
+			if (current_level > 1) {
+				let targetLevel = current_level - 1
+
+				// Cek dari level target sampai level 1, cari yang ada soalnya
+				while (targetLevel >= 1) {
+					if (hasQuestion(targetLevel, nextQuestion)) {
+						nextLevel = targetLevel
+						break
+					}
+					targetLevel--
+				}
+
+				// Kalau ga ada soal di level yang lebih rendah juga, tetap di level sekarang
+				// (ini juga edge case)
+			}
+			// Kalau udah di level 1 dan salah, tetap di level 1
 		}
 
-		if (current_question < soalCount) {
-			response['current_question'] = current_question + 1
+		let response = {
+			current_level: nextLevel,
+			current_question: current_question,
+			isEnded: false,
+		}
+
+		// 11. Cek apakah masih ada soal selanjutnya
+		if (nextQuestion <= soalCount) {
+			response['current_question'] = nextQuestion
 		} else {
 			response['isEnded'] = true
 			testSession.test_status = 'completed'
 		}
 
+		// 12. Update state di test session
 		testSession.state.current_question = response.current_question
 		testSession.state.current_level = response.current_level
 		testSession.markModified('state')
@@ -844,22 +849,27 @@ export const getTestReport = async (req, res) => {
 			}
 		}
 
-		// Get results by materi
-		const materies = await Materi.find().lean()
-		const questions = await Question.find().select('_id id_materi').lean()
+		//Get results by materi
+		const mMateries = await Materi.find()
+		const mQuestions = await Question.find()
+		const mSessions = await TestSession
+		let mMateriesQResult = []
 
-		const questionToMateri = {}
-		questions.forEach(q => {
-			questionToMateri[q._id.toString()] = q.id_materi?.toString()
-		})
-		const materiResultArr = Object.values(materiResults)
+		for (const mtr of mMateries) {
+			const mIdMateri = mtr._id.toString()
+			const mQuestionMateri = mQuestions.filter(q => q.id_materi.toString() === mIdMateri)
+			mMateriesQResult.push({
+				id_materi: mIdMateri,
+				materi_data: mtr,
+				questions: mQuestionMateri,
+			})
+		}
 
 		const responseData = {
 			participants: partProfile,
 			instances: instances,
 			result: result,
 			instanceResults: [],
-			materiResults: materiResultArr,
 		}
 
 		Object.keys(instanceResults).forEach(instName => {
@@ -873,59 +883,57 @@ export const getTestReport = async (req, res) => {
 }
 
 export const getMateriScores = async (req, res) => {
-        try {
-                const { id_test } = req.body
+	try {
+		const { id_test } = req.body
 
-                const testSessions = await TestSession.find({ id_test }).lean()
-                if (!testSessions.length) {
-                        return res
-                                .status(404)
-                                .json({ status: 404, message: 'Tidak ada sesi test ditemukan untuk test ini' })
-                }
+		const testSessions = await TestSession.find({ id_test }).lean()
+		if (!testSessions.length) {
+			return res
+				.status(404)
+				.json({ status: 404, message: 'Tidak ada sesi test ditemukan untuk test ini' })
+		}
 
-                const questions = await Question.find().select('_id id_materi').lean()
-                const questionToMateri = {}
-                questions.forEach(q => {
-                        questionToMateri[q._id.toString()] = q.id_materi?.toString()
-                })
+		const questions = await Question.find().select('_id id_materi').lean()
+		const questionToMateri = {}
+		questions.forEach(q => {
+			questionToMateri[q._id.toString()] = q.id_materi?.toString()
+		})
 
-                const materies = await Materi.find().select('_id name').lean()
-                const materiMap = {}
-                materies.forEach(m => {
-                        materiMap[m._id.toString()] = m.name
-                })
+		const materies = await Materi.find().select('_id name').lean()
+		const materiMap = {}
+		materies.forEach(m => {
+			materiMap[m._id.toString()] = m.name
+		})
 
-                const scoreMap = {}
-                for (const sess of testSessions) {
-                        for (const q of sess.question_done || []) {
-                                const qId = q.question_data?.id_question?.toString()
-                                const mId = questionToMateri[qId]
-                                if (!mId) continue
+		const scoreMap = {}
+		for (const sess of testSessions) {
+			for (const q of sess.question_done || []) {
+				const qId = q.question_data?.id_question?.toString()
+				const mId = questionToMateri[qId]
+				if (!mId) continue
 
-                                if (!scoreMap[mId]) {
-                                        scoreMap[mId] = {
-                                                materi: materiMap[mId] || 'Unknown',
-                                                correct: 0,
-                                                incorrect: 0,
-                                        }
-                                }
+				if (!scoreMap[mId]) {
+					scoreMap[mId] = {
+						materi: materiMap[mId] || 'Unknown',
+						correct: 0,
+						incorrect: 0,
+					}
+				}
 
-                                if (q.isCorrect) {
-                                        scoreMap[mId].correct++
-                                } else if (q.answered) {
-                                        scoreMap[mId].incorrect++
-                                }
-                        }
-                }
+				if (q.isCorrect) {
+					scoreMap[mId].correct++
+				} else if (q.answered) {
+					scoreMap[mId].incorrect++
+				}
+			}
+		}
 
-                const scoreArr = Object.values(scoreMap)
-                return res
-                        .status(200)
-                        .json({ status: 200, message: 'ok', data: { score: scoreArr } })
-        } catch (error) {
-                console.error('Error fetching materi scores:', error)
-                return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
-        }
+		const scoreArr = Object.values(scoreMap)
+		return res.status(200).json({ status: 200, message: 'ok', data: { score: scoreArr } })
+	} catch (error) {
+		console.error('Error fetching materi scores:', error)
+		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
+	}
 }
 
 export const getParticipantsByInstance = async (req, res) => {

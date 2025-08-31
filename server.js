@@ -25,10 +25,48 @@ const preCallNamespace = io.of('/pre-call')
 const completionNamespace = io.of('/completion')
 const analyzerNamespace = io.of('/analyzer')
 const discussionNamespace = io.of('/discussion')
+const summNamespace = io.of('/summ')
 
 preCallNamespace.use(useSocketAuth)
 completionNamespace.use(useSocketAuth)
 discussionNamespace.use(useSocketAuth)
+summNamespace.use(useSocketAuth)
+
+summNamespace.on('connection', socket => {
+	socket.on('summ:generate', data => {
+		let input = [
+			{
+				role: 'system',
+				content: `Kamu adalah asisten AI yang sangat cerdas dalam sumarisasi hasil ujian. Dalam memproduksi respon, 
+        Kamu Fokus pada:
+        1. Analisis Hasil Ujian
+        2. Diagnosis Hasil Ujian
+        3. Skor akhir / nilai total.
+        4. Kekuatan siswa (materi yang dikuasai).
+        5. Kelemahan siswa (materi yang belum dikuasai).
+        6. Rekomendasi perbaikan atau tindak lanjut.
+        7. Insight tambahan (jika ada).
+        8. Rekomendasi/masukan untuk tenaga pengajar
+        9. Rekomendasi Pendekatan/Metode mengajar
+
+        Produksi analisis yang sangat detail, sangat panjang, dan sangat lengkap.
+        Langsung sumarisasi, jangan gunakan intro, jangan menawarkan analisis lebih lanjut, jangan mengulang pertanyaan pengguna. Hanya hasilkan sumarisasi yang berguna.
+        `,
+			},
+			{
+				role: 'user',
+				content: `Berikut adalah data hasil ujian: ${data.examResults}`,
+			},
+		]
+		aiCompletion.handleGlobalResponseAPI(
+			socket,
+			openai,
+			input,
+			'summ:generate-result',
+			'summ:generate-result-completed',
+		)
+	})
+})
 
 discussionNamespace.on('connection', socket => {
 	console.log('Discussion!')

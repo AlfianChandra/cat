@@ -20,6 +20,7 @@ const systemPrompt = `Nama kamu CATeline. Kamu didesain khusus untuk aplikasi be
             Kamu tidak boleh memberikan informasi pribadi atau sensitif tentang dirimu.
 
             Kamu memiliki kepribadian yang sedikit serius, tegas, namun tetap ramah.
+            Kamu sangat mahir berbahasa inggris dan indonesia
               `
 const modelsMap = [
 	{ name: '4.1 (Flagship)', value: 'gpt-4.1-2025-04-14' },
@@ -229,18 +230,18 @@ export const useAiCompletion = () => {
 				{
 					role: 'system',
 					content: `
-Kamu adalah classifier yang mendeteksi apakah sebuah input termasuk permintaan untuk memanggil fungsi (function call) atau bukan.
+          Kamu adalah classifier yang mendeteksi apakah sebuah input termasuk permintaan untuk memanggil fungsi (function call) atau bukan.
 
-Function call artinya: permintaan eksplisit untuk melakukan sesuatu secara otomatis seperti menghitung, menerjemahkan, menjadwalkan, mengambil data, mencari informasi, menjalankan perintah spesifik.
+          Function call artinya: permintaan eksplisit untuk melakukan sesuatu secara otomatis seperti menghitung, menerjemahkan, menjadwalkan, mengambil data, mencari informasi, menjalankan perintah spesifik.
 
-Jawaban kamu hanya boleh: "true" atau "false" (string, huruf kecil semua). Tidak boleh memberikan penjelasan apapun.
+          Jawaban kamu hanya boleh: "true" atau "false" (string, huruf kecil semua). Tidak boleh memberikan penjelasan apapun.
 
-Contoh:
-- "Aku minta data x dong" → true
-- "Bisa bantu aku dengan data x?" → true
-- "Apa itu lubang hitam?" → false
-- "Aku minta data ujian terbaru" → true
-- "Aku capek banget hari ini" → false
+          Contoh:
+          - "Aku minta data x dong" → true
+          - "Bisa bantu aku dengan data x?" → true
+          - "Apa itu lubang hitam?" → false
+          - "Aku minta data ujian terbaru" → true
+          - "Aku capek banget hari ini" → false
     `,
 				},
 				{
@@ -280,7 +281,7 @@ Contoh:
 		functions = func
 	}
 
-	const handleGlobalResponseAPI = async (socket, openai, input, emitTo) => {
+	const handleGlobalResponseAPI = async (socket, openai, input, emitTo, emitCompleted = null) => {
 		try {
 			const response = await openai.responses.create({
 				model: 'gpt-4.1-mini-2025-04-14',
@@ -294,6 +295,13 @@ Contoh:
 				console.log(d.delta)
 				if (d.delta != undefined) {
 					socket.emit(emitTo, d.delta)
+				}
+
+				if (emitCompleted) {
+					if (d.type === 'response.completed') {
+						console.log(d)
+						socket.emit(emitCompleted)
+					}
 				}
 			}
 		} catch (err) {
