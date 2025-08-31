@@ -487,7 +487,7 @@ export const answerQuestion = async (req, res) => {
 
 		// 3. Cek jawaban bener apa kagak
 		const idAnswer = answer?.id_answer
-		const isCorrect = question.answers.some(a => a.id_answer === idAnswer && a.is_correct)
+		const isCorrect = question.answers.find(a => a.id_answer === idAnswer)?.is_correct || false
 
 		// 4. Ambil questionPack dari current_level
 		const payload = testSession.payload
