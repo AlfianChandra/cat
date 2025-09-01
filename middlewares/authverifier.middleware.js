@@ -16,7 +16,7 @@ const allowedOrigins = [
 	'http://localhost:2512',
 	'https://accounts.google.com/', //Google
 	'PostmanRuntime', //Dev - Postman
-	'https://imanextgencbt.id/',
+	'https://imanextgencbt.id',
 	'http://imanextgencbt.id',
 ]
 export const useAuthVerifier = (req, res, next) => {
