@@ -102,7 +102,7 @@ export const startTest = async (req, res) => {
 
 		for (const soal of test.questions) {
 			const idQuestionCat = soal._id.toString()
-			const questions = await Question.find({ id_category: idQuestionCat })
+			const questions = await Question.find({ id_category: idQuestionCat, active: true })
 			//const soal number
 			const userQuestion = questions.map(q => ({
 				id_question: q._id,
