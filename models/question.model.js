@@ -38,6 +38,11 @@ const questionSchema = new mongoose.Schema({
 		ref: 'Materi',
 		required: true,
 	},
+	active: {
+		type: Boolean,
+		default: true,
+		required: false,
+	},
 })
 
 export const Question = mongoose.model('Question', questionSchema)
