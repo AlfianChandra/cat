@@ -102,7 +102,7 @@ export const startTest = async (req, res) => {
 
 		for (const soal of test.questions) {
 			const idQuestionCat = soal._id.toString()
-			const questions = await Question.find({ id_category: idQuestionCat })
+			const questions = await Question.find({ id_category: idQuestionCat, active: true })
 			//const soal number
 			const userQuestion = questions.map(q => ({
 				id_question: q._id,
@@ -463,8 +463,15 @@ export const getQuestion = async (req, res) => {
 
 export const answerQuestion = async (req, res) => {
 	try {
-		const { test_token, id_question, answer, time_taken, current_question, current_level } =
-			req.body
+		const {
+			test_token,
+			id_question,
+			answer,
+			time_taken,
+			current_question,
+			current_level,
+			answer_reason,
+		} = req.body
 
 		// 1. Find test session
 		const testSession = await TestSession.findOne({ session_token: test_token })
@@ -543,6 +550,7 @@ export const answerQuestion = async (req, res) => {
 			}
 			testSession.question_done[questionIndex].isCorrect = isCorrect
 			testSession.question_done[questionIndex].level = current_level || null
+			testSession.question_done[questionIndex].answer_reason = answer_reason || null
 		}
 		testSession.markModified('question_done')
 
