@@ -284,7 +284,7 @@ export const useAiCompletion = () => {
 	const handleGlobalResponseAPI = async (socket, openai, input, emitTo, emitCompleted = null) => {
 		try {
 			const response = await openai.responses.create({
-				model: 'gpt-4.1-mini-2025-04-14',
+				model: 'gpt-4.1-2025-04-14',
 				temperature: 0.9,
 				top_p: 1.0,
 				input,

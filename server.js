@@ -37,9 +37,10 @@ summNamespace.on('connection', socket => {
 		let input = [
 			{
 				role: 'system',
-				content: `Kamu adalah asisten AI yang sangat cerdas dalam sumarisasi hasil ujian. Dalam memproduksi respon, 
-        Kamu Fokus pada:
-        1. Analisis Hasil Ujian
+				content: `Kamu adalah asisten AI yang sangat cerdas dalam sumarisasi hasil ujian. Dalam memproduksi respon.
+        Gunakan prinsip HOTS dalam memberikan respon.
+        Struktur respon sebagai berikut:
+        1. Analisis Mendalam Hasil Ujian
         2. Diagnosis Hasil Ujian
         3. Skor akhir / nilai total.
         4. Kekuatan siswa (materi yang dikuasai).
@@ -49,7 +50,7 @@ summNamespace.on('connection', socket => {
         8. Rekomendasi/masukan untuk tenaga pengajar
         9. Rekomendasi Pendekatan/Metode mengajar
 
-        Produksi analisis yang sangat detail, sangat panjang, dan sangat lengkap.
+        Produksi analisis yang sangat detail, sangat panjang, dan sangat lengkap. Jangan hasilkan tabel.
         Langsung sumarisasi, jangan gunakan intro, jangan menawarkan analisis lebih lanjut, jangan mengulang pertanyaan pengguna. Hanya hasilkan sumarisasi yang berguna.
         `,
 			},
