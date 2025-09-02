@@ -1019,7 +1019,6 @@ export const getParticipantsByInstance = async (req, res) => {
 			return res.status(404).json({ status: 404, message: 'Tidak ada peserta ditemukan' })
 		}
 
-		//Order by start date, where test_status = 'completed'
 		const userSessions = await TestSession.find({
 			id_test,
 			id_participant: { $in: participants.map(p => p._id) },
