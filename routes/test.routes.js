@@ -20,9 +20,12 @@ const {
 	getUserSessions,
 	getParticipantsByInstance,
 	fixParticipantAnswers,
+	getTestSessionData,
+	getCurrentSession,
+	getQuestion,
+	answerQuestion,
+	setAsCompleted,
 } = await import('../controllers/test.controller.js')
-const { getTestSessionData, getCurrentSession, getQuestion, answerQuestion, setAsCompleted } =
-	await import('../controllers/test.controller.js')
 import { webmasterOnly, userOnly } from '../middlewares/restrictions.middleware.js'
 const router = express.Router()
 
@@ -47,6 +50,7 @@ router.post('/session/question', userOnly, getQuestion)
 router.post('/session/answer', userOnly, answerQuestion)
 router.get('/session/user', userOnly, getUserSessions)
 
+// Recalculate participant answer correctness
 router.post('/session/fixanswers', webmasterOnly, fixParticipantAnswers)
 
 router.post('/user/sessions', webmasterOnly, getUserTestSessions)

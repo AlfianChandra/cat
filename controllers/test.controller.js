@@ -7,7 +7,6 @@ import { Materi } from '../models/materi.model.js'
 import { TestSession } from '../models/testSession.model.js'
 import moment from 'moment'
 import bcrypt from 'bcrypt'
-import { gradeAnswer } from '../services/answer.js'
 
 export const getSoalData = async (req, res) => {
 	try {
@@ -1040,37 +1039,33 @@ export const getParticipantsByInstance = async (req, res) => {
 				sessionData.participant_data = participantData
 			}
 			let answers = {}
+			// initialize answer counters per level name
 			sess.payload.forEach(item => {
-				answers[item.name] = {
+				const levelName = item.name || `Level ${item.level}`
+				answers[levelName] = {
 					correct: 0,
 					incorrect: 0,
 				}
 			})
+
+			// tally correct and incorrect answers from question_done
 			sess.question_done.forEach(q => {
+				const levelName =
+					sess.payload.find(p => String(p.level) === String(q.level))?.name || `Level ${q.level}`
+				if (!answers[levelName]) return
 				if (q.isCorrect) {
-					const levelName = sess.payload.find(p => p.level === q.level)?.name || `Level ${q.level}`
-					if (answers[levelName] !== undefined) {
-						answers[levelName].correct += 1
-					}
-				} else if (q.answer !== null && !q.isCorrect) {
-					const levelName = sess.payload.find(p => p.level === q.level)?.name || `Level ${q.level}`
-					if (answers[levelName] !== undefined) {
-						answers[levelName].incorrect += 1
-					}
+					answers[levelName].correct += 1
+				} else if (q.answer != null) {
+					answers[levelName].incorrect += 1
 				}
 			})
+
 			sessionData.answers_data = answers
 			sessionData.report = {
 				Nama: participantData.name,
 				Status: sess.test_status == 'completed' ? 'Selesai' : 'Sedang Berlangsung',
 			}
 
-			sess.payload.forEach(item => {
-				sessionData.report[item.name + ' - Benar'] = 0
-				sessionData.report[item.name + ' - Salah'] = 0
-			})
-
-			// Populate the report with correct and incorrect counts
 			Object.keys(sessionData.answers_data).forEach(levelName => {
 				sessionData.report[levelName + ' - Benar'] =
 					sessionData.answers_data[levelName].correct || 0
@@ -1108,20 +1103,15 @@ export const getParticipantsByInstance = async (req, res) => {
 		for (const sess of userSessions) {
 			const cats = sess.payload || []
 			for (const q of sess.question_done || []) {
-				const level = q.level
-				const name = cats.find(cat => cat.level === level)?.name || `Level ${level}`
-				if (!result[name]) {
-					result[name] = {
-						correct: q.isCorrect ? 1 : 0,
-						incorrect: !q.isCorrect && q.answer !== null ? 1 : 0,
-						indicator_name: name,
-					}
-				} else {
-					if (q.isCorrect) {
-						result[name].correct++
-					} else if (q.answer !== null) {
-						result[name].incorrect++
-					}
+				const levelName =
+					cats.find(cat => String(cat.level) === String(q.level))?.name || `Level ${q.level}`
+				if (!result[levelName]) {
+					result[levelName] = { correct: 0, incorrect: 0, indicator_name: levelName }
+				}
+				if (q.isCorrect) {
+					result[levelName].correct++
+				} else if (q.answer != null) {
+					result[levelName].incorrect++
 				}
 			}
 		}
@@ -1234,8 +1224,7 @@ export const fixParticipantAnswers = async (req, res) => {
 
 			for (const pack of session.payload || []) {
 				for (const q of pack.questions || []) {
-					const userAnswer = q?.result?.answer
-					if (userAnswer == null) continue
+					const answerValue = q?.result?.answer != null ? String(q.result.answer) : ''
 
 					let question = cache.get(q.id_question)
 					if (!question) {
@@ -1244,7 +1233,9 @@ export const fixParticipantAnswers = async (req, res) => {
 					}
 					if (!question) continue
 
-					const { isCorrect } = gradeAnswer(question, { value: userAnswer })
+					const found = (question.answers || []).find(a => String(a?.value) === answerValue)
+					const isCorrect = found ? Boolean(found.is_correct) : false
+
 					if (q.result.isCorrect !== isCorrect) {
 						q.result.isCorrect = isCorrect
 						sessionUpdated = true
