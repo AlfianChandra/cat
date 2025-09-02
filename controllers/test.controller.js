@@ -493,9 +493,12 @@ export const answerQuestion = async (req, res) => {
 			return res.status(404).json({ status: 404, message: 'Soal tidak ditemukan' })
 		}
 
-                // 3. Grade the answer using Question -> answers.is_correct
-                const graded = gradeAnswer(question, answer)
-                const isCorrect = graded.isCorrect
+   // 3. Grade the answer using Question -> answers.is_correct
+   const graded = gradeAnswer(question, answer)
+   const { correctIds, correctLabels, chosenIds, chosenLabels } = graded
+   const isCorrect =
+           correctIds.length === chosenIds.length &&
+           correctIds.every(id => chosenIds.includes(id))
 
 		// 4. Ambil questionPack dari current_level
 		const payload = testSession.payload
@@ -528,15 +531,20 @@ export const answerQuestion = async (req, res) => {
 
 		const idInstance = participant.id_instansi
 
-		// 6. Update hasil jawaban
-                questionToUpdate.result = {
-                        isCorrect,
-                        answer: graded.chosenLabels.length > 1
-                                ? graded.chosenLabels
-                                : graded.chosenLabels[0] || null,
-                        time_taken: time_taken || null,
-                }
-		testSession.markModified('payload')
+   // 6. Update hasil jawaban
+   questionToUpdate.result = {
+           isCorrect,
+           answer: chosenLabels.length > 1
+                   ? chosenLabels
+                   : chosenLabels[0] || null,
+           correct_answer:
+                   correctLabels.length > 1
+                           ? correctLabels
+                           : correctLabels[0] || null,
+           time_taken: time_taken || null,
+   }
+   testSession.markModified('payload')
+
 
 		// 7. Update daftar soal yang udah dijawab
 		const questionIndex = testSession.question_done.findIndex(q => q.no === current_question)
@@ -551,14 +559,19 @@ export const answerQuestion = async (req, res) => {
                                 id_participant: idParticipant.toString(),
                                 id_instance: idInstance.toString(),
                         }
-                        testSession.question_done[questionIndex].isCorrect = isCorrect
-                        testSession.question_done[questionIndex].answer =
-                                graded.chosenLabels.length > 1
-                                        ? graded.chosenLabels
-                                        : graded.chosenLabels[0] || null
-                        testSession.question_done[questionIndex].level = current_level || null
-                        testSession.question_done[questionIndex].answer_reason = answer_reason || null
-                }
+
+                       testSession.question_done[questionIndex].isCorrect = isCorrect
+                       testSession.question_done[questionIndex].answer =
+                               chosenLabels.length > 1
+                                       ? chosenLabels
+                                       : chosenLabels[0] || null
+                       testSession.question_done[questionIndex].correct_answer =
+                               correctLabels.length > 1
+                                       ? correctLabels
+                                       : correctLabels[0] || null
+                       testSession.question_done[questionIndex].level = current_level || null
+                       testSession.question_done[questionIndex].answer_reason = answer_reason || null
+               }
 		testSession.markModified('question_done')
 
 		// 8. Save perubahan sebelum menentukan level selanjutnya
