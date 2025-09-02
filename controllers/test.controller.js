@@ -1187,6 +1187,62 @@ export const getUserSessions = async (req, res) => {
 		return res.status(200).json({ status: 200, message: 'ok', data: results })
 	} catch (error) {
 		console.error('Error fetching user sessions:', error)
-		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
-	}
+                return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
+        }
+}
+
+export const fixParticipantAnswers = async (req, res) => {
+        try {
+                const sessions = await TestSession.find()
+                const cache = new Map()
+                let updatedCount = 0
+
+                for (const session of sessions) {
+                        let sessionUpdated = false
+
+                        for (const pack of session.payload || []) {
+                                for (const q of pack.questions || []) {
+                                        const userAnswer = q?.result?.answer
+                                        if (userAnswer == null) continue
+
+                                        let question = cache.get(q.id_question)
+                                        if (!question) {
+                                                question = await Question.findById(q.id_question).lean()
+                                                if (question) cache.set(q.id_question, question)
+                                        }
+                                        if (!question) continue
+
+                                        const { isCorrect } = gradeAnswer(question, { value: userAnswer })
+                                        if (q.result.isCorrect !== isCorrect) {
+                                                q.result.isCorrect = isCorrect
+                                                sessionUpdated = true
+                                        }
+
+                                        const done = session.question_done?.find(d => {
+                                                return (
+                                                        d.question_data?.id_question === q.id_question || d.no === q.no
+                                                )
+                                        })
+                                        if (done && done.isCorrect !== isCorrect) {
+                                                done.isCorrect = isCorrect
+                                                sessionUpdated = true
+                                        }
+                                }
+                        }
+
+                        if (sessionUpdated) {
+                                session.markModified('payload')
+                                session.markModified('question_done')
+                                await session.save()
+                                updatedCount++
+                        }
+                }
+
+                return res
+                        .status(200)
+                        .json({ status: 200, message: 'Jawaban peserta berhasil diperbarui', updated: updatedCount })
+        } catch (error) {
+                console.error('Error fixing participant answers:', error)
+                return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
+        }
 }
