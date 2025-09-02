@@ -13,13 +13,13 @@ const {
 	deleteTest,
 	startTest,
 	getUserTestSessions,
-        getSoalData,
-        getTestReport,
-        getMateriScores,
-        updateTestAccess,
-        getUserSessions,
-        getParticipantsByInstance,
-        fixParticipantAnswers,
+	getSoalData,
+	getTestReport,
+	getMateriScores,
+	updateTestAccess,
+	getUserSessions,
+	getParticipantsByInstance,
+	fixParticipantAnswers,
 } = await import('../controllers/test.controller.js')
 const { getTestSessionData, getCurrentSession, getQuestion, answerQuestion, setAsCompleted } =
 	await import('../controllers/test.controller.js')
