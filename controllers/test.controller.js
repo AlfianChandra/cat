@@ -1024,18 +1024,17 @@ export const getParticipantsByInstance = async (req, res) => {
 			return res.status(404).json({ status: 404, message: 'Tidak ada peserta ditemukan' })
 		}
 
-		// Ambil user sessions dengan filter status yang benar
+		// Ambil user sessions dengan filter status
 		const sessionQuery = {
 			id_test,
 			id_participant: { $in: participants.map(p => p._id) },
 		}
 
-		// Tambahkan filter status jika ada
 		if (status) {
 			sessionQuery.test_status = status
 		}
 
-		const userSessions = await TestSession.find(sessionQuery).sort({ start_date: 1 })
+		const userSessions = await TestSession.find(sessionQuery).sort({ start: 1 })
 
 		if (userSessions.length === 0) {
 			return res.status(404).json({ status: 404, message: 'Tidak ada sesi test ditemukan' })
@@ -1044,25 +1043,23 @@ export const getParticipantsByInstance = async (req, res) => {
 		// Proses data response
 		const response = []
 
-		// Inisialisasi struktur result berdasarkan payload dari session pertama
-		const categories = userSessions[0]?.payload || []
-		const resultStructure = {}
+		// Ambil struktur level dari session pertama untuk konsistensi
+		const firstSession = userSessions[0]
+		const levelStructure = {}
 
-		categories.forEach(cat => {
-			const levelName = cat.name || `Level ${cat.level}`
-			resultStructure[levelName] = {
-				correct: 0,
-				incorrect: 0,
-				indicator_name: levelName,
-			}
-		})
+		if (firstSession && firstSession.payload) {
+			firstSession.payload.forEach(item => {
+				const levelName = item.name || `Level ${item.level}`
+				levelStructure[levelName] = { correct: 0, incorrect: 0 }
+			})
+		}
 
 		// Proses setiap session
-		userSessions.forEach(sess => {
+		for (const sess of userSessions) {
 			const idParticipant = sess.id_participant.toString()
 			const participantData = participants.find(p => p._id.toString() === idParticipant)
 
-			if (!participantData) return // Skip jika participant tidak ditemukan
+			if (!participantData) continue
 
 			const sessionData = {
 				session_data: sess,
@@ -1074,56 +1071,83 @@ export const getParticipantsByInstance = async (req, res) => {
 				},
 			}
 
-			// Inisialisasi answers berdasarkan payload session ini
-			sess.payload.forEach(item => {
-				const levelName = item.name || `Level ${item.level}`
-				sessionData.answers_data[levelName] = {
-					correct: 0,
-					incorrect: 0,
-				}
-			})
+			// Inisialisasi struktur jawaban berdasarkan payload session
+			const payloadLevels = {}
+			if (sess.payload) {
+				sess.payload.forEach(item => {
+					const levelName = item.name || `Level ${item.level}`
+					payloadLevels[levelName] = { correct: 0, incorrect: 0 }
+					sessionData.answers_data[levelName] = { correct: 0, incorrect: 0 }
+				})
+			}
 
-			// Hitung jawaban benar dan salah
-			sess.question_done.forEach(q => {
-				const levelItem = sess.payload.find(p => String(p.level) === String(q.level))
-				const levelName = levelItem?.name || `Level ${q.level}`
+			// Hitung jawaban dari question_done
+			if (sess.question_done && sess.question_done.length > 0) {
+				sess.question_done.forEach(q => {
+					// Cari level name dari payload berdasarkan level number
+					let levelName = `Level ${q.level}`
 
-				if (sessionData.answers_data[levelName]) {
-					if (q.isCorrect) {
-						sessionData.answers_data[levelName].correct += 1
-					} else if (q.answer != null) {
-						sessionData.answers_data[levelName].incorrect += 1
+					if (sess.payload) {
+						const payloadItem = sess.payload.find(p => p.level === q.level)
+						if (payloadItem) {
+							levelName = payloadItem.name || `Level ${q.level}`
+						}
 					}
-				}
-			})
+
+					// Pastikan level exists di answers_data
+					if (!sessionData.answers_data[levelName]) {
+						sessionData.answers_data[levelName] = { correct: 0, incorrect: 0 }
+					}
+
+					// Hitung berdasarkan status jawaban
+					if (q.answered === true || q.answer !== null) {
+						if (q.isCorrect === true) {
+							sessionData.answers_data[levelName].correct += 1
+						} else {
+							sessionData.answers_data[levelName].incorrect += 1
+						}
+					}
+				})
+			}
 
 			// Buat report per level
 			Object.keys(sessionData.answers_data).forEach(levelName => {
-				sessionData.report[`${levelName} - Benar`] = sessionData.answers_data[levelName].correct
-				sessionData.report[`${levelName} - Salah`] = sessionData.answers_data[levelName].incorrect
+				const correctCount = sessionData.answers_data[levelName].correct || 0
+				const incorrectCount = sessionData.answers_data[levelName].incorrect || 0
+
+				sessionData.report[`${levelName} - Benar`] = correctCount
+				sessionData.report[`${levelName} - Salah`] = incorrectCount
 			})
 
 			response.push(sessionData)
-		})
+		}
 
 		// Hitung total dari semua sessions
 		const total = {}
+
+		// Inisialisasi total dengan struktur level
+		Object.keys(levelStructure).forEach(levelName => {
+			total[levelName] = { correct: 0, incorrect: 0 }
+		})
+
+		// Akumulasi dari semua response
 		response.forEach(sessData => {
 			Object.keys(sessData.answers_data).forEach(levelName => {
 				if (!total[levelName]) {
 					total[levelName] = { correct: 0, incorrect: 0 }
 				}
-				total[levelName].correct += sessData.answers_data[levelName].correct
-				total[levelName].incorrect += sessData.answers_data[levelName].incorrect
+				total[levelName].correct += sessData.answers_data[levelName].correct || 0
+				total[levelName].incorrect += sessData.answers_data[levelName].incorrect || 0
 			})
 		})
 
-		// Hitung result (sama dengan total tapi dengan struktur berbeda)
-		const result = { ...resultStructure }
-		Object.keys(total).forEach(levelName => {
-			if (result[levelName]) {
-				result[levelName].correct = total[levelName].correct
-				result[levelName].incorrect = total[levelName].incorrect
+		// Buat result dengan struktur yang sama seperti total
+		const result = {}
+		Object.keys(levelStructure).forEach(levelName => {
+			result[levelName] = {
+				correct: total[levelName] ? total[levelName].correct : 0,
+				incorrect: total[levelName] ? total[levelName].incorrect : 0,
+				indicator_name: levelName,
 			}
 		})
 
