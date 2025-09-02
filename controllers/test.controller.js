@@ -143,9 +143,11 @@ export const startTest = async (req, res) => {
 		const sessionToken = `${Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}`
 		const endTest = moment(startTest).add(testTimeLimit, 'minutes').toDate()
 
-		const longestQuestions = soalCollection.reduce((max, current) =>
-			current.questions.length > max.questions.length ? current : max,
-		).questions
+		const longestQuestions = soalCollection.length
+			? soalCollection.reduce((max, current) =>
+					current.questions.length > max.questions.length ? current : max,
+				).questions
+			: []
 
 		for (const soal of longestQuestions) {
 			questionsDone.push({ no: soal.no, answered: false })
@@ -913,7 +915,6 @@ export const getTestReport = async (req, res) => {
 		//Get results by materi
 		const mMateries = await Materi.find()
 		const mQuestions = await Question.find()
-		const mSessions = await TestSession
 		let mMateriesQResult = []
 
 		for (const mtr of mMateries) {
@@ -1041,9 +1042,6 @@ export const getParticipantsByInstance = async (req, res) => {
 		}
 
 		// Proses data response
-		const response = []
-
-		// Ambil struktur level dari session pertama untuk konsistensi
 		const firstSession = userSessions[0]
 		const levelStructure = {}
 
@@ -1099,7 +1097,7 @@ export const getParticipantsByInstance = async (req, res) => {
 
 			sessionData.answers_data = answers
 			sessionData.report = {
-				Nama: participantData.name,
+				Nama: participantData?.name,
 				Status: sess.test_status == 'completed' ? 'Selesai' : 'Sedang Berlangsung',
 			}
 
@@ -1185,7 +1183,6 @@ export const setAsCompleted = async (req, res) => {
 			return res.status(404).json({ status: 404, message: 'Sesi test tidak ditemukan' })
 		}
 
-		const start = testSession.start
 		const end = testSession.end
 		const currentTime = moment().toDate()
 		if (currentTime < end) {
