@@ -7,6 +7,7 @@ import { Materi } from '../models/materi.model.js'
 import { TestSession } from '../models/testSession.model.js'
 import moment from 'moment'
 import bcrypt from 'bcrypt'
+import { gradeAnswer } from '../services/answer.js'
 
 export const getSoalData = async (req, res) => {
 	try {
@@ -492,48 +493,49 @@ export const answerQuestion = async (req, res) => {
 			return res.status(404).json({ status: 404, message: 'Soal tidak ditemukan' })
 		}
 
-               // 3. Ambil jawaban benar dan cocokkan jawaban user berdasarkan string
-               const getAnswerValue = a =>
-                       a?.answers && typeof a.answers.value !== 'undefined'
-                               ? a.answers.value
-                               : a?.value
-               const correctValues = question.answers
-                       .filter(a => a.is_correct)
-                       .map(getAnswerValue)
+   // 3. Ambil jawaban benar dan cocokkan jawaban user berdasarkan string
+   const getAnswerValue = a =>
+           a?.answers && typeof a.answers.value !== 'undefined'
+                   ? a.answers.value
+                   : a?.value
+   const correctValues = question.answers
+           .filter(a => a.is_correct)
+           .map(getAnswerValue)
 
-               let chosenValues = []
-               if (answer && typeof answer === 'object') {
-                       if (Array.isArray(answer.id_answer)) {
-                               chosenValues = answer.id_answer
-                                       .map(id => {
-                                               const opt = question.answers.find(
-                                                       a => a.id_answer.toString() === id.toString(),
-                                               )
-                                               return opt ? getAnswerValue(opt) : null
-                                       })
-                                       .filter(v => v !== null)
-                       } else if (answer.id_answer) {
-                               const opt = question.answers.find(
-                                       a => a.id_answer.toString() === answer.id_answer.toString(),
-                               )
-                               if (opt) chosenValues.push(getAnswerValue(opt))
-                       } else if (Array.isArray(answer.value)) {
-                               chosenValues = answer.value.map(v => String(v))
-                       } else if (typeof answer.value !== 'undefined') {
-                               chosenValues.push(String(answer.value))
-                       }
-               } else if (typeof answer !== 'undefined') {
-                       chosenValues = Array.isArray(answer)
-                               ? answer.map(v => String(v))
-                               : [String(answer)]
-               }
+   let chosenValues = []
+   if (answer && typeof answer === 'object') {
+           if (Array.isArray(answer.id_answer)) {
+                   chosenValues = answer.id_answer
+                           .map(id => {
+                                   const opt = question.answers.find(
+                                           a => a.id_answer.toString() === id.toString(),
+                                   )
+                                   return opt ? getAnswerValue(opt) : null
+                           })
+                           .filter(v => v !== null)
+           } else if (answer.id_answer) {
+                   const opt = question.answers.find(
+                           a => a.id_answer.toString() === answer.id_answer.toString(),
+                   )
+                   if (opt) chosenValues.push(getAnswerValue(opt))
+           } else if (Array.isArray(answer.value)) {
+                   chosenValues = answer.value.map(v => String(v))
+           } else if (typeof answer.value !== 'undefined') {
+                   chosenValues.push(String(answer.value))
+           }
+   } else if (typeof answer !== 'undefined') {
+           chosenValues = Array.isArray(answer)
+                   ? answer.map(v => String(v))
+                   : [String(answer)]
+   }
 
-               const isCorrect =
-                       chosenValues.length === correctValues.length &&
-                       chosenValues.every(v => correctValues.includes(v))
+   const isCorrect =
+           chosenValues.length === correctValues.length &&
+           chosenValues.every(v => correctValues.includes(v))
 
-               const chosenLabels = chosenValues
-               const correctLabels = correctValues
+   const chosenLabels = chosenValues
+   const correctLabels = correctValues
+
 
 		// 4. Ambil questionPack dari current_level
 		const payload = testSession.payload
@@ -566,19 +568,19 @@ export const answerQuestion = async (req, res) => {
 
 		const idInstance = participant.id_instansi
 
-               // 6. Update hasil jawaban
-               questionToUpdate.result = {
-                       isCorrect,
-                       answer: chosenLabels.length > 1
-                               ? chosenLabels
-                               : chosenLabels[0] || null,
-                       correct_answer:
-                               correctLabels.length > 1
-                                       ? correctLabels
-                                       : correctLabels[0] || null,
-                       time_taken: time_taken || null,
-               }
-               testSession.markModified('payload')
+   // 6. Update hasil jawaban
+   questionToUpdate.result = {
+           isCorrect,
+           answer: chosenLabels.length > 1
+                   ? chosenLabels
+                   : chosenLabels[0] || null,
+           correct_answer:
+                   correctLabels.length > 1
+                           ? correctLabels
+                           : correctLabels[0] || null,
+           time_taken: time_taken || null,
+   }
+   testSession.markModified('payload')
 
 		// 7. Update daftar soal yang udah dijawab
 		const questionIndex = testSession.question_done.findIndex(q => q.no === current_question)
@@ -589,22 +591,24 @@ export const answerQuestion = async (req, res) => {
 				id_question: id_question,
 				id_question_cat: questionPack.id_questioncat,
 			}
-                        testSession.question_done[questionIndex].participant_data = {
-                                id_participant: idParticipant.toString(),
-                                id_instance: idInstance.toString(),
-                        }
-                       testSession.question_done[questionIndex].isCorrect = isCorrect
-                       testSession.question_done[questionIndex].answer =
-                               chosenLabels.length > 1
-                                       ? chosenLabels
-                                       : chosenLabels[0] || null
-                       testSession.question_done[questionIndex].correct_answer =
-                               correctLabels.length > 1
-                                       ? correctLabels
-                                       : correctLabels[0] || null
-                       testSession.question_done[questionIndex].level = current_level || null
-                       testSession.question_done[questionIndex].answer_reason = answer_reason || null
-               }
+
+      testSession.question_done[questionIndex].participant_data = {
+              id_participant: idParticipant.toString(),
+              id_instance: idInstance.toString(),
+      }
+     testSession.question_done[questionIndex].isCorrect = isCorrect
+     testSession.question_done[questionIndex].answer =
+             chosenLabels.length > 1
+                     ? chosenLabels
+                     : chosenLabels[0] || null
+     testSession.question_done[questionIndex].correct_answer =
+             correctLabels.length > 1
+                     ? correctLabels
+                     : correctLabels[0] || null
+     testSession.question_done[questionIndex].level = current_level || null
+     testSession.question_done[questionIndex].answer_reason = answer_reason || null
+}
+
 		testSession.markModified('question_done')
 
 		// 8. Save perubahan sebelum menentukan level selanjutnya
@@ -1233,6 +1237,60 @@ export const getUserSessions = async (req, res) => {
 		return res.status(200).json({ status: 200, message: 'ok', data: results })
 	} catch (error) {
 		console.error('Error fetching user sessions:', error)
+		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
+	}
+}
+
+export const fixParticipantAnswers = async (req, res) => {
+	try {
+		const sessions = await TestSession.find()
+		const cache = new Map()
+		let updatedCount = 0
+
+		for (const session of sessions) {
+			let sessionUpdated = false
+
+			for (const pack of session.payload || []) {
+				for (const q of pack.questions || []) {
+					const userAnswer = q?.result?.answer
+					if (userAnswer == null) continue
+
+					let question = cache.get(q.id_question)
+					if (!question) {
+						question = await Question.findById(q.id_question).lean()
+						if (question) cache.set(q.id_question, question)
+					}
+					if (!question) continue
+
+					const { isCorrect } = gradeAnswer(question, { value: userAnswer })
+					if (q.result.isCorrect !== isCorrect) {
+						q.result.isCorrect = isCorrect
+						sessionUpdated = true
+					}
+
+					const done = session.question_done?.find(d => {
+						return d.question_data?.id_question === q.id_question || d.no === q.no
+					})
+					if (done && done.isCorrect !== isCorrect) {
+						done.isCorrect = isCorrect
+						sessionUpdated = true
+					}
+				}
+			}
+
+			if (sessionUpdated) {
+				session.markModified('payload')
+				session.markModified('question_done')
+				await session.save()
+				updatedCount++
+			}
+		}
+
+		return res
+			.status(200)
+			.json({ status: 200, message: 'Jawaban peserta berhasil diperbarui', updated: updatedCount })
+	} catch (error) {
+		console.error('Error fixing participant answers:', error)
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
 	}
 }
