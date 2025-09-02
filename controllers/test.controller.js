@@ -7,6 +7,7 @@ import { Materi } from '../models/materi.model.js'
 import { TestSession } from '../models/testSession.model.js'
 import moment from 'moment'
 import bcrypt from 'bcrypt'
+import { gradeAnswer } from '../services/answer.js'
 
 export const getSoalData = async (req, res) => {
 	try {
@@ -492,9 +493,12 @@ export const answerQuestion = async (req, res) => {
 			return res.status(404).json({ status: 404, message: 'Soal tidak ditemukan' })
 		}
 
-		// 3. Cek jawaban bener apa kagak
-		const idAnswer = answer?.id_answer
-		const isCorrect = question.answers.find(a => a.id_answer === idAnswer)?.is_correct || false
+               // 3. Grade the answer using Question -> answers.is_correct
+               const graded = gradeAnswer(question, answer)
+               const { correctIds, correctLabels, chosenIds, chosenLabels } = graded
+               const isCorrect =
+                       correctIds.length === chosenIds.length &&
+                       correctIds.every(id => chosenIds.includes(id))
 
 		// 4. Ambil questionPack dari current_level
 		const payload = testSession.payload
@@ -527,13 +531,19 @@ export const answerQuestion = async (req, res) => {
 
 		const idInstance = participant.id_instansi
 
-		// 6. Update hasil jawaban
-		questionToUpdate.result = {
-			isCorrect,
-			answer: answer?.value || null,
-			time_taken: time_taken || null,
-		}
-		testSession.markModified('payload')
+               // 6. Update hasil jawaban
+               questionToUpdate.result = {
+                       isCorrect,
+                       answer: chosenLabels.length > 1
+                               ? chosenLabels
+                               : chosenLabels[0] || null,
+                       correct_answer:
+                               correctLabels.length > 1
+                                       ? correctLabels
+                                       : correctLabels[0] || null,
+                       time_taken: time_taken || null,
+               }
+               testSession.markModified('payload')
 
 		// 7. Update daftar soal yang udah dijawab
 		const questionIndex = testSession.question_done.findIndex(q => q.no === current_question)
@@ -544,14 +554,22 @@ export const answerQuestion = async (req, res) => {
 				id_question: id_question,
 				id_question_cat: questionPack.id_questioncat,
 			}
-			testSession.question_done[questionIndex].participant_data = {
-				id_participant: idParticipant.toString(),
-				id_instance: idInstance.toString(),
-			}
-			testSession.question_done[questionIndex].isCorrect = isCorrect
-			testSession.question_done[questionIndex].level = current_level || null
-			testSession.question_done[questionIndex].answer_reason = answer_reason || null
-		}
+                        testSession.question_done[questionIndex].participant_data = {
+                                id_participant: idParticipant.toString(),
+                                id_instance: idInstance.toString(),
+                        }
+                       testSession.question_done[questionIndex].isCorrect = isCorrect
+                       testSession.question_done[questionIndex].answer =
+                               chosenLabels.length > 1
+                                       ? chosenLabels
+                                       : chosenLabels[0] || null
+                       testSession.question_done[questionIndex].correct_answer =
+                               correctLabels.length > 1
+                                       ? correctLabels
+                                       : correctLabels[0] || null
+                       testSession.question_done[questionIndex].level = current_level || null
+                       testSession.question_done[questionIndex].answer_reason = answer_reason || null
+               }
 		testSession.markModified('question_done')
 
 		// 8. Save perubahan sebelum menentukan level selanjutnya
