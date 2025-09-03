@@ -53,6 +53,8 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 						console.log(args)
 					}
 				}
+
+				console.log(item)
 			})
 		})
 
