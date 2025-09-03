@@ -154,6 +154,8 @@ completionNamespace.on('connection', socket => {
 	})
 })
 
+await loadListeners()
+
 const PORT = process.env.PORT || 2512
 server.listen(PORT, () => {
 	console.log(`Server: System => Started on :${PORT}`)
