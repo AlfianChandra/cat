@@ -35,12 +35,10 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 			let input = [
 				{
 					role: 'system',
-					content: data.prompt,
+					content: options.prompt,
 				},
 			]
 			input.push(...data.conversation)
-			console.log(input)
-			return
 			const response = await openai.responses.create({
 				model: options.model,
 				temperature: options.temperature,
