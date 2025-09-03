@@ -6,9 +6,8 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 	io.on('connection', async socket => {
 		let openai = await getOpenAIInstance()
 
-    socket.on('chatbot:client_chat', (data) => { 
-      
-    })
+		console.log(`[CHAT] client connected: ${socket.id}`)
+		socket.on('chatbot:client_chat', data => {})
 
 		socket.on('disconnect', () => {
 			logger.info(`[CHAT] client left: ${socket.id}`)
