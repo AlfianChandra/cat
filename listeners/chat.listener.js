@@ -10,7 +10,7 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 		socket.on('chatbot:client_chat', data => {})
 
 		socket.on('disconnect', () => {
-			logger.info(`[CHAT] client left: ${socket.id}`)
+			console.log(`[CHAT] client left: ${socket.id}`)
 		})
 	})
 })
