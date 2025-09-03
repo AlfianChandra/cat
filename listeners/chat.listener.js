@@ -32,14 +32,7 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 		console.log(`[CHAT] client connected: ${socket.id}`)
 		socket.on('chatbot:client_chat', async data => {
 			const options = data.assistant_options
-			let input = [
-				{
-					role: 'system',
-					content: options.prompt,
-				},
-			]
-			input.push(...data.conversation)
-			console.log(input)
+			console.log(formatConvo(options.memory, data.conversation))
 			return
 			const response = await openai.responses.create({
 				model: options.model,
@@ -65,6 +58,51 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 		})
 	})
 })
+
+const formatConvo = (memory, conversation) => {
+	const memoryLimit = memory
+	const lastKnownConvo = conversation.slice(-memoryLimit)
+	const convo = lastKnownConvo.map(msg => {
+		if (msg.media == null) {
+			return {
+				role: msg.role,
+				content: msg.message,
+			}
+		} else {
+			let structure = []
+			msg.media.forEach(media => {
+				if (media.type === 'image') {
+					structure.push({
+						type: 'image_url',
+						image_url: {
+							url: media.data,
+							detail: 'auto',
+						},
+					})
+				} else {
+					structure.push({
+						type: 'text',
+						text: `Berikut adalah data hasil ekstraksi dari file ${
+							media.type
+						} bernama ${media.name}: ${media.markdown == undefined ? media.data : media.markdown}`,
+					})
+				}
+			})
+
+			structure.push({
+				type: 'text',
+				text: msg.message,
+			})
+
+			return {
+				role: msg.role,
+				content: structure,
+			}
+		}
+	})
+
+	return convo
+}
 
 async function getOpenAIInstance() {
 	const openai = await registry.waitFor('openai')
