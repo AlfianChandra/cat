@@ -1481,7 +1481,8 @@ export const getSescatDetail = async (req, res) => {
 		}
 
 		const payload = ses.payload
-		console.log(payload)
+		const idcats = payload.map(p => p.id_questioncat)
+		console.log(idcats)
 	} catch (err) {
 		console.error('Error fetching sesi cat detail:', err)
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
