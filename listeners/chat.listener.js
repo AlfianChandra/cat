@@ -52,8 +52,8 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 			})
 
 			response = await openai.responses.create({
-				model: 'gpt-5',
-				instruction: 'Respon hasil pemanggilan fungsi',
+				model: 'gpt-4.1',
+				instructions: 'Respon hasil pemanggilan fungsi',
 				tools,
 				input,
 			})
