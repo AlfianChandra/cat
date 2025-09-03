@@ -77,7 +77,7 @@ const formatConvo = (memory, conversation) => {
 			msg.media.forEach(media => {
 				if (media.type === 'image') {
 					structure.push({
-						type: 'image_url',
+						type: 'input_image',
 						image_url: {
 							url: media.data,
 							detail: 'auto',
