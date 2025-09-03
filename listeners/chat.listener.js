@@ -85,7 +85,7 @@ const formatConvo = (memory, conversation) => {
 					})
 				} else {
 					structure.push({
-						type: 'text',
+						type: 'input_text',
 						text: `Berikut adalah data hasil ekstraksi dari file ${
 							media.type
 						} bernama ${media.name}: ${media.markdown == undefined ? media.data : media.markdown}`,
@@ -94,7 +94,7 @@ const formatConvo = (memory, conversation) => {
 			})
 
 			structure.push({
-				type: 'text',
+				type: 'input_text',
 				text: msg.message,
 			})
 
