@@ -58,7 +58,7 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 				input,
 			})
 
-			console.log(response.output)
+			console.log(response)
 		})
 
 		socket.on('disconnect', () => {
