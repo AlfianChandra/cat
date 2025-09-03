@@ -32,7 +32,7 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 		console.log(`[CHAT] client connected: ${socket.id}`)
 		socket.on('chatbot:client_chat', async data => {
 			const options = data.assistant_options
-			const input = formatConvo(options.memory, data.conversation)
+			let input = formatConvo(options.memory, data.conversation)
 			const response = await openai.responses.create({
 				model: options.model,
 				temperature: options.temperature,
@@ -44,7 +44,10 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 				if (item.type === 'function_call') {
 					if (item.name === 'get_participantreport') {
 						const args = JSON.parse(item.arguments)
-						console.log(args)
+						input.push({
+							type: 'function_call_output',
+							call_id: item.call_id,
+						})
 					}
 				}
 
