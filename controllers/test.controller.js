@@ -741,21 +741,13 @@ export const getUserTestSessions = async (req, res) => {
 						participant_data: qd.participant_data,
 						isCorrect: qd.isCorrect,
 						answer: qd.answer,
-						materi: () => {
-							const materies =
-								materi.find(
-									m =>
-										m._id.toString() ===
-										allQuestions
-											.find(aq => aq._id.toString() === qd.question_data?.id_question)
-											?.id_materi.toString(),
-								) || null
-
-							return {
-								name: materies.name,
-								capaian: materies.capaian,
-							}
-						},
+						materi: materi.find(
+							m =>
+								m._id.toString() ===
+								allQuestions
+									.find(aq => aq._id.toString() === qd.question_data?.id_question)
+									?.id_materi.toString(),
+						),
 						correct_answer: qd.correct_answer,
 						level: qd.level,
 						answer_reason: qd.answer_reason,
