@@ -78,10 +78,7 @@ const formatConvo = (memory, conversation) => {
 				if (media.type === 'image') {
 					structure.push({
 						type: 'input_image',
-						image_url: {
-							url: media.data,
-							detail: 'auto',
-						},
+						image_url: media.data,
 					})
 				} else {
 					structure.push({
