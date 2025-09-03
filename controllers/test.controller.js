@@ -7,6 +7,7 @@ import { Materi } from '../models/materi.model.js'
 import { TestSession } from '../models/testSession.model.js'
 import moment from 'moment'
 import bcrypt from 'bcrypt'
+import QuestionCat from '../models/questionCat.model.js'
 
 export const getSoalData = async (req, res) => {
 	try {
@@ -1482,7 +1483,18 @@ export const getSescatDetail = async (req, res) => {
 
 		const payload = ses.payload
 		const idcats = payload.map(p => p.id_questioncat)
-		console.log(idcats)
+
+		if (idcats.length === 0) {
+			return res.status(404).json({ status: 404, message: 'Kategori tidak ditemukan' })
+		}
+
+		let catDetailsData = []
+		for (const x of idcats) {
+			const catData = await QuestionCat.findById(x)
+			catDetailsData.push(catData)
+		}
+
+		return res.status(200).json({ status: 200, payload: catDetailsData })
 	} catch (err) {
 		console.error('Error fetching sesi cat detail:', err)
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
