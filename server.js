@@ -15,7 +15,7 @@ const server = http.createServer(app)
 const io = new Server(server, {
 	maxHttpBufferSize: 1e8, // 100MB
 	cors: {
-		origin: ['https://imanextgencbt.id'],
+		origin: ['https://imanextgencbt.id', 'http://localhost:5173'],
 		methods: ['GET', 'POST'],
 	},
 })
