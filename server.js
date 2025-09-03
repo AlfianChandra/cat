@@ -7,6 +7,8 @@ import { useAiCompletion } from './socket/ai.completion.ctrl.js'
 import path from 'path'
 import mime from 'mime'
 import fs from 'fs'
+import registry from './utils/serviceregistry.utils.js'
+import loadListeners from './listeners/index.js'
 
 const aiCompletion = useAiCompletion()
 const server = http.createServer(app)
@@ -26,6 +28,10 @@ const completionNamespace = io.of('/completion')
 const analyzerNamespace = io.of('/analyzer')
 const discussionNamespace = io.of('/discussion')
 const summNamespace = io.of('/summ')
+
+registry.register('openai', openai)
+registry.register('io', io)
+registry.register('chatns', io.of('/chat'))
 
 preCallNamespace.use(useSocketAuth)
 completionNamespace.use(useSocketAuth)
