@@ -745,8 +745,9 @@ export const getUserTestSessions = async (req, res) => {
 							materi.find(
 								m =>
 									m._id.toString() ===
-									allQuestions.find(aq => aq._id.toString() === qd.question_data?.id_question)
-										?.id_materi,
+									allQuestions
+										.find(aq => aq._id.toString() === qd.question_data?.id_question)
+										?.id_materi.toString(),
 							) || null,
 						correct_answer: qd.correct_answer,
 						level: qd.level,
