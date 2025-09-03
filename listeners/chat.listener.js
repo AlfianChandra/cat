@@ -57,12 +57,12 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 
 			console.log(input)
 			// Call kedua (respon setelah function_call_output dimasukin)
-			response = await openai.responses.create({
+			const secondResponse = await openai.responses.create({
 				model: options.model,
 				input,
 			})
 
-			console.log(response.output)
+			console.log(secondResponse.output)
 		})
 
 		socket.on('disconnect', () => {
