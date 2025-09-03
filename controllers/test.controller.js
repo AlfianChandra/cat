@@ -1522,3 +1522,26 @@ export const getSescatDetail = async (req, res) => {
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
 	}
 }
+
+export const fcGetParticipantReport = async params => {
+	try {
+		const { participant_search_keyword } = params
+		//search user by name, use LIKE clause
+		const participant = await Participant.findOne({
+			name: { $regex: participant_search_keyword, $options: 'i' },
+		})
+		if (!participant) {
+			return { status: 404, message: 'Participant not found' }
+		}
+
+		const result = await TestSession.findById(participant._id.toString())
+		if (!result) {
+			return { status: 404, message: 'Test session not found' }
+		}
+
+		return result
+	} catch (err) {
+		console.error('Error fetching participant report:', err)
+		return { status: 500, message: 'Terjadi kesalahan server' }
+	}
+}

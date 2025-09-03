@@ -1,12 +1,13 @@
 import registry from '../utils/serviceregistry.utils.js'
 import { useSocketAuth } from '../middlewares/authverifier.socket.middleware.js'
+import { fcGetParticipantReport } from '../controllers/test.controller.js'
 
 const tools = [
 	{
 		type: 'function',
 		name: 'get_participantreport',
 		description:
-			'Mengambil data hasil ujian partisipan. Fungsi ini mencari data hasil ujian peserta pada sebuah tes',
+			'Mengambil data hasil ujian partisipan. Fungsi ini mencari data hasil ujian peserta',
 		parameters: {
 			type: 'object',
 			properties: {
@@ -14,12 +15,8 @@ const tools = [
 					type: 'string',
 					description: 'Keyword untuk mencari partisipan berdasarkan nama',
 				},
-				test_search_keyword: {
-					type: 'string',
-					description: 'Keyword untuk mencari data assesmen',
-				},
 			},
-			required: ['participant_search_keyword', 'test_search_keyword'],
+			required: ['participant_search_keyword'],
 		},
 	},
 ]
@@ -40,19 +37,27 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 				tools,
 			})
 
-			response.output.forEach(item => {
+			response.output.forEach(async item => {
 				if (item.type === 'function_call') {
 					if (item.name === 'get_participantreport') {
 						const args = JSON.parse(item.arguments)
+						const result = await fcGetParticipantReport(args)
 						input.push({
 							type: 'function_call_output',
 							call_id: item.call_id,
+							output: JSON.stringify(result),
 						})
 					}
 				}
-
-				console.log(item)
 			})
+
+			response = await openai.responses.create({
+				model: 'gpt-5',
+				tools,
+				input,
+			})
+
+			console.log(response.output)
 		})
 
 		socket.on('disconnect', () => {
