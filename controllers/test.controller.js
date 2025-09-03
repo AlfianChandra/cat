@@ -1523,8 +1523,8 @@ export const getSescatDetail = async (req, res) => {
 	}
 }
 
-export const fcGetParticipantReport = async params => {
-	try {
+export const fcGetParticipantReport = params => {
+	return new Promise(async (res, rej) => {
 		const { participant_search_keyword } = params
 		//search user by name, use LIKE clause
 		const participant = await Participant.findOne({
@@ -1540,10 +1540,6 @@ export const fcGetParticipantReport = async params => {
 		if (!result) {
 			return { status: 404, message: 'Test session not found' }
 		}
-
-		return result
-	} catch (err) {
-		console.error('Error fetching participant report:', err)
-		return { status: 500, message: 'Terjadi kesalahan server' }
-	}
+		res(result)
+	})
 }
