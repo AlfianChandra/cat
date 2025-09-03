@@ -60,7 +60,6 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 			response = await openai.responses.create({
 				model: options.model,
 				instructions: 'Respon hasil pemanggilan fungsi',
-				tools,
 				input,
 			})
 		})
