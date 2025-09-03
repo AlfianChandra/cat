@@ -1471,3 +1471,14 @@ export const fixParticipantAnswers = async (req, res) => {
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
 	}
 }
+
+export const getSescatDetail = async (req, res) => {
+	try {
+		const { id_session } = req.body
+		const ses = await TestSession.findById(id_session)
+		console.log(ses)
+	} catch (err) {
+		console.error('Error fetching sesi cat detail:', err)
+		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
+	}
+}
