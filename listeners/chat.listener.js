@@ -67,7 +67,7 @@ const formatConvo = (memory, conversation) => {
 				role: msg.role,
 				content: [
 					{
-						type: 'text',
+						type: 'input_text',
 						text: msg.message,
 					},
 				],
