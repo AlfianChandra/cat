@@ -1476,7 +1476,12 @@ export const getSescatDetail = async (req, res) => {
 	try {
 		const { id_session } = req.body
 		const ses = await TestSession.findById(id_session)
-		console.log(ses)
+		if (!ses) {
+			return res.status(404).json({ status: 404, message: 'Sesi tidak ditemukan' })
+		}
+
+		const payload = ses.payload
+		console.log(payload)
 	} catch (err) {
 		console.error('Error fetching sesi cat detail:', err)
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
