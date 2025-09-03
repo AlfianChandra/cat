@@ -30,7 +30,7 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 		socket.on('chatbot:client_chat', async data => {
 			const options = data.assistant_options
 			let input = formatConvo(options.memory, data.conversation)
-			const response = await openai.responses.create({
+			let response = await openai.responses.create({
 				model: options.model,
 				temperature: options.temperature,
 				input,
