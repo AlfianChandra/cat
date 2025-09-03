@@ -28,15 +28,16 @@ const completionNamespace = io.of('/completion')
 const analyzerNamespace = io.of('/analyzer')
 const discussionNamespace = io.of('/discussion')
 const summNamespace = io.of('/summ')
-
-registry.register('openai', openai)
-registry.register('io', io)
-registry.register('chatns', io.of('/chat'))
-
+const chatNamespace = io.of('/chat')
 preCallNamespace.use(useSocketAuth)
 completionNamespace.use(useSocketAuth)
 discussionNamespace.use(useSocketAuth)
 summNamespace.use(useSocketAuth)
+chatNamespace.use(useSocketAuth)
+
+registry.register('openai', openai)
+registry.register('io', io)
+registry.register('chatns', chatNamespace)
 
 summNamespace.on('connection', socket => {
 	socket.on('summ:generate', data => {
