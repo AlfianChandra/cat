@@ -65,7 +65,12 @@ const formatConvo = (memory, conversation) => {
 		if (msg.media == null) {
 			return {
 				role: msg.role,
-				content: msg.message,
+				content: [
+					{
+						type: 'text',
+						text: msg.message,
+					},
+				],
 			}
 		} else {
 			let structure = []
