@@ -30,6 +30,8 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 		socket.on('chatbot:client_chat', async data => {
 			const options = data.assistant_options
 			let input = formatConvo(options.memory, data.conversation)
+
+			// Call pertama
 			let response = await openai.responses.create({
 				model: options.model,
 				temperature: options.temperature,
@@ -37,11 +39,13 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 				tools,
 			})
 
-			response.output.forEach(async item => {
+			// Handle function calls
+			for (const item of response.output) {
 				if (item.type === 'function_call') {
 					if (item.name === 'get_participantreport') {
 						const args = JSON.parse(item.arguments)
 						const result = await fcGetParticipantReport(args)
+
 						input.push({
 							type: 'function_call_output',
 							call_id: item.call_id,
@@ -49,16 +53,17 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 						})
 					}
 				}
-			})
+			}
 
-			response = await openai.responses.create({
+			// Call kedua (respon setelah function_call_output dimasukin)
+			const finalResponse = await openai.responses.create({
 				model: 'gpt-4.1',
 				instructions: 'Respon hasil pemanggilan fungsi',
 				tools,
 				input,
 			})
 
-			console.log(response)
+			console.log(finalResponse)
 		})
 
 		socket.on('disconnect', () => {
