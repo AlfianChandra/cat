@@ -62,6 +62,8 @@ registry.waitFor('chatns', { timeoutMs: 1000 }).then(io => {
 				instructions: 'Respon hasil pemanggilan fungsi',
 				input,
 			})
+
+			console.log(response.output)
 		})
 
 		socket.on('disconnect', () => {
