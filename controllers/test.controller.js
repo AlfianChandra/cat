@@ -1534,7 +1534,7 @@ export const fcGetParticipantReport = async params => {
 			return { status: 404, message: 'Participant not found' }
 		}
 
-		const result = await TestSession.findById(participant._id.toString())
+		const result = await TestSession.findOne({ id_participant: participant._id.toString() })
 		if (!result) {
 			return { status: 404, message: 'Test session not found' }
 		}
