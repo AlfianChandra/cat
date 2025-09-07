@@ -477,6 +477,37 @@ export const answerQuestion = async (req, res) => {
 			answer_reason,
 		} = req.body
 
+		const testSession = await TestSession.findOne({ session_token: test_token })
+		if (!testSession) {
+			return res.status(404).json({ status: 404, message: 'Sesi test tidak ditemukan' })
+		}
+
+		const endTime = testSession.end
+		if (moment().isAfter(endTime)) {
+			testSession.test_status = 'completed'
+			await testSession.save()
+			return res.status(400).json({ status: 400, message: 'Waktu test sudah berakhir' })
+		}
+
+		const question = await Question.findById(id_question)
+		console.log(question)
+	} catch (err) {
+		console.error('Error answering question:', err)
+	}
+}
+
+export const answerQuestion1 = async (req, res) => {
+	try {
+		const {
+			test_token,
+			id_question,
+			answer,
+			time_taken,
+			current_question,
+			current_level,
+			answer_reason,
+		} = req.body
+
 		// 1. Find test session
 		const testSession = await TestSession.findOne({ session_token: test_token })
 		if (!testSession) {
