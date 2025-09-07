@@ -8,6 +8,7 @@ import { TestSession } from '../models/testSession.model.js'
 import moment from 'moment'
 import bcrypt from 'bcrypt'
 import QuestionCat from '../models/questionCat.model.js'
+import { gradeAnswer } from '../services/answer.js'
 
 export const getSoalData = async (req, res) => {
 	try {
@@ -495,40 +496,9 @@ export const answerQuestion = async (req, res) => {
 			return res.status(404).json({ status: 404, message: 'Soal tidak ditemukan' })
 		}
 
-		// 3. Ambil jawaban benar dan cocokkan jawaban user berdasarkan string
-		const getAnswerValue = a =>
-			a?.answers && typeof a.answers.value !== 'undefined' ? a.answers.value : a?.value
-		const correctValues = question.answers.filter(a => a.is_correct).map(getAnswerValue)
-
-		let chosenValues = []
-		if (answer && typeof answer === 'object') {
-			if (Array.isArray(answer.id_answer)) {
-				chosenValues = answer.id_answer
-					.map(id => {
-						const opt = question.answers.find(a => a.id_answer.toString() === id.toString())
-						return opt ? getAnswerValue(opt) : null
-					})
-					.filter(v => v !== null)
-			} else if (answer.id_answer) {
-				const opt = question.answers.find(
-					a => a.id_answer.toString() === answer.id_answer.toString(),
-				)
-				if (opt) chosenValues.push(getAnswerValue(opt))
-			} else if (Array.isArray(answer.value)) {
-				chosenValues = answer.value.map(v => String(v))
-			} else if (typeof answer.value !== 'undefined') {
-				chosenValues.push(String(answer.value))
-			}
-		} else if (typeof answer !== 'undefined') {
-			chosenValues = Array.isArray(answer) ? answer.map(v => String(v)) : [String(answer)]
-		}
-
-		const isCorrect =
-			chosenValues.length === correctValues.length &&
-			chosenValues.every(v => correctValues.includes(v))
-
-		const chosenLabels = chosenValues
-		const correctLabels = correctValues
+		// 3. Cocokkan jawaban user dengan jawaban benar dari database
+		const normalizedAnswer = typeof answer === 'object' ? answer : { value: answer }
+		const { isCorrect, chosenLabels, correctLabels } = gradeAnswer(question, normalizedAnswer)
 
 		// 4. Ambil questionPack dari current_level
 		const payload = testSession.payload
