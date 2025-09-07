@@ -490,7 +490,6 @@ export const answerQuestion = async (req, res) => {
 			return res.status(400).json({ status: 400, message: 'Waktu test sudah berakhir' })
 		}
 
-		// 2. Find question
 		const question = await Question.findById(id_question)
 		if (!question) {
 			return res.status(404).json({ status: 404, message: 'Soal tidak ditemukan' })
