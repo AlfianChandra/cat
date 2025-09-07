@@ -490,7 +490,127 @@ export const answerQuestion = async (req, res) => {
 		}
 
 		const question = await Question.findById(id_question)
-		console.log(question)
+
+		const idAnswer = answer.id_answer
+		const answerValue = answer.value
+		const correctAnswer = question.answers.find(a => a.is_correct)
+		const correctIdAnswer = correctAnswer.id_answer
+		const isCorrect = idAnswer === correctIdAnswer
+
+		const pack = testSession.payload.find(p => p.level === current_level).questions
+		const questionInPack = pack.find(qp => qp.no === current_question)
+
+		//Update result
+		questionInPack.result = { isCorrect, answer: answerValue, time_taken }
+		testSession.markModified('payload')
+
+		//Update question done
+		const qDoneIndex = testSession.question_done.findIndex(qd => qd.no === current_question)
+		if (qDoneIndex !== -1) {
+			testSession.question_done[qDoneIndex].answered = true
+			testSession.question_done[qDoneIndex].time_taken = time_taken || null
+			testSession.question_done[qDoneIndex].question_data = {
+				id_question: id_question,
+				id_question_cat: question.id_category,
+			}
+			testSession.question_done[qDoneIndex].isCorrect = isCorrect
+			testSession.question_done[qDoneIndex].time_taken = time_taken || null
+		}
+
+		//Save question_done
+		testSession.markModified('question_done')
+		await testSession.save()
+
+		// 10. Tentukan level selanjutnya berdasarkan logic yang baru
+		const idTest = testSession.id_test
+		const test = await Test.findById(idTest)
+		const levelCount = test.questions.length
+		const soalCount = testSession.question_done.length
+		const nextQuestion = current_question + 1
+
+		const hasQuestion = (level, questionNo) => {
+			return testSession.payload.some(
+				p => p.level === level && p.questions.some(q => q.no === questionNo),
+			)
+		}
+
+		// Helper untuk mencari level berikutnya dengan soal
+		const findLevelWithQuestion = (start, step) => {
+			let lvl = start
+			while (lvl >= 1 && lvl <= levelCount) {
+				if (hasQuestion(lvl, nextQuestion)) return lvl
+				lvl += step
+			}
+			return null
+		}
+
+		let nextLevel = current_level
+
+		if (current_level === 1) {
+			if (isCorrect) {
+				const lvl = findLevelWithQuestion(current_level + 1, 1)
+				if (lvl) nextLevel = lvl
+			} else {
+				if (!hasQuestion(current_level, nextQuestion)) {
+					const lvl = findLevelWithQuestion(current_level + 1, 1)
+					if (lvl) nextLevel = lvl
+				}
+			}
+		} else if (current_level === levelCount) {
+			if (isCorrect) {
+				if (!hasQuestion(current_level, nextQuestion)) {
+					const lvl = findLevelWithQuestion(current_level - 1, -1)
+					if (lvl) nextLevel = lvl
+				}
+			} else {
+				let lvl = findLevelWithQuestion(current_level - 1, -1)
+				if (lvl !== null) {
+					nextLevel = lvl
+				} else {
+					lvl = findLevelWithQuestion(1, 1)
+					if (lvl !== null) nextLevel = lvl
+				}
+			}
+		} else {
+			if (isCorrect) {
+				const lvl = findLevelWithQuestion(current_level + 1, 1)
+				if (lvl) nextLevel = lvl
+			} else {
+				let lvl = findLevelWithQuestion(current_level - 1, -1)
+				if (lvl !== null) {
+					nextLevel = lvl
+				} else {
+					lvl = findLevelWithQuestion(current_level + 1, 1)
+					if (lvl !== null) nextLevel = lvl
+				}
+			}
+		}
+
+		let response = {
+			current_level: nextLevel,
+			current_question: current_question,
+			isEnded: false,
+		}
+
+		// 11. Cek apakah masih ada soal selanjutnya
+		if (nextQuestion <= soalCount) {
+			response['current_question'] = nextQuestion
+		} else {
+			response['isEnded'] = true
+			testSession.test_status = 'completed'
+		}
+
+		// 12. Update state di test session
+		testSession.state.current_question = response.current_question
+		testSession.state.current_level = response.current_level
+		testSession.markModified('state')
+		await testSession.save()
+
+		return res.status(200).json({
+			status: 200,
+			message: 'Jawaban berhasil disimpan',
+			data: response,
+		})
 	} catch (err) {
 		console.error('Error answering question:', err)
 	}
