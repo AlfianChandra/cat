@@ -1144,137 +1144,153 @@ export const getMateriScores = async (req, res) => {
 export const getParticipantsByInstance = async (req, res) => {
 	try {
 		const { id_test, id_instance, status } = req.body
-		const test = await Test.findById(id_test)
+
+		// 1) Validasi test & instance
+		const test = await Test.findById(id_test).lean()
 		if (!test) {
 			return res.status(404).json({ status: 404, message: 'Test tidak ditemukan' })
 		}
-
-		const instance = test.instances.find(inst => inst._id.toString() === id_instance)
+		const instance = (test.instances || []).find(i => i._id.toString() === String(id_instance))
 		if (!instance) {
 			return res
 				.status(404)
 				.json({ status: 404, message: 'Instansi tidak ditemukan dalam test ini' })
 		}
 
+		// 2) Ambil peserta instansi ini
 		const participants = await Participant.find({ id_instansi: id_instance })
 			.select('-password_string -username_string')
 			.lean()
-		if (participants.length === 0) {
-			return res.status(404).json({ status: 404, message: 'Tidak ada peserta ditemukan' })
+
+		// Boleh return kosong (200) biar UI bisa nunjukin "no data" tanpa error
+		if (!participants || participants.length === 0) {
+			return res
+				.status(200)
+				.json({ status: 200, message: 'ok', data: { data: [], total: {}, result: {} } })
 		}
 
-		//Order by start date, where test_status = 'completed'
-		const userSessions = await TestSession.find({
+		const participantMap = new Map(participants.map(p => [p._id.toString(), p]))
+
+		// 3) Ambil sesi user
+		const sessionFilter = {
 			id_test,
 			id_participant: { $in: participants.map(p => p._id) },
-			test_status: status || 'completed',
-		}).sort({ start_date: 1 })
-		if (userSessions.length === 0) {
-			return res.status(404).json({ status: 404, message: 'Tidak ada peserta ditemukan' })
+		}
+		if (status) sessionFilter.test_status = status
+		else sessionFilter.test_status = 'completed'
+
+		// NOTE: field yang benar adalah "start", bukan "start_date"
+		const userSessions = await TestSession.find(sessionFilter).sort({ start: 1 }).lean()
+
+		if (!userSessions || userSessions.length === 0) {
+			return res
+				.status(200)
+				.json({ status: 200, message: 'ok', data: { data: [], total: {}, result: {} } })
 		}
 
-		let response = []
+		const response = []
+		const total = {} // agregat semua peserta
+		const result = {} // alias untuk chartContainer di frontend
+
 		for (const sess of userSessions) {
-			const idParticipant = sess.id_participant.toString()
-			const participantData = participants.find(p => p._id.toString() === idParticipant)
-			let sessionData = {}
-			sessionData.session_data = sess
-			if (participantData) {
-				sessionData.participant_data = participantData
-			}
-			let answers = {}
-			sess.payload.forEach(item => {
-				answers[item.name] = {
-					correct: 0,
-					incorrect: 0,
-				}
-			})
-			sess.question_done.forEach(q => {
-				if (q.isCorrect) {
-					const levelName = sess.payload.find(p => p.level === q.level)?.name || `Level ${q.level}`
-					if (answers[levelName] !== undefined) {
-						answers[levelName].correct += 1
+			// 4) Siapkan peta kategori dari payload
+			const answers = {}
+			const mapByNo = new Map()
+			const mapByQid = new Map()
+
+			for (const pack of sess.payload || []) {
+				const catName = pack.name || `Level ${pack.level}`
+				answers[catName] = { correct: 0, incorrect: 0, indicator_name: catName }
+
+				for (const q of pack.questions || []) {
+					if (q?.no != null) mapByNo.set(String(q.no), catName)
+					if (q?.id_question) mapByQid.set(String(q.id_question), catName)
+
+					// 5) SUMBER UTAMA: payload.questions[*].result
+					if (
+						q?.result &&
+						(q.result.isCorrect === true || q.result.isCorrect === false || q.result.answer != null)
+					) {
+						if (q.result.isCorrect === true) {
+							answers[catName].correct += 1
+						} else {
+							// treat punya result tapi tidak correct sebagai salah
+							answers[catName].incorrect += 1
+						}
 					}
-				} else if (q.answer !== null && !q.isCorrect) {
-					const levelName = sess.payload.find(p => p.level === q.level)?.name || `Level ${q.level}`
-					if (answers[levelName] !== undefined) {
-						answers[levelName].incorrect += 1
-					}
 				}
-			})
-			sessionData.answers_data = answers
-			sessionData.report = {
-				Nama: participantData.name,
-				Status: sess.test_status == 'completed' ? 'Selesai' : 'Sedang Berlangsung',
 			}
 
-			sess.payload.forEach(item => {
-				sessionData.report[item.name + ' - Benar'] = 0
-				sessionData.report[item.name + ' - Salah'] = 0
-			})
+			// 6) FALLBACK: kalau belum ada hitungan dari result (sesi lama), pakai question_done
+			const allZero = Object.values(answers).every(v => v.correct === 0 && v.incorrect === 0)
+			if (allZero && Array.isArray(sess.question_done)) {
+				for (const qd of sess.question_done) {
+					const byNo = mapByNo.get(String(qd?.no))
+					const byId = mapByQid.get(String(qd?.question_data?.id_question))
+					const byLevel =
+						qd?.level != null
+							? (sess.payload || []).find(p => p.level === qd.level)?.name || `Level ${qd.level}`
+							: null
+					const catName = byNo || byId || byLevel
+					if (!catName) continue
 
-			// Populate the report with correct and incorrect counts
-			Object.keys(sessionData.answers_data).forEach(levelName => {
-				sessionData.report[levelName + ' - Benar'] =
-					sessionData.answers_data[levelName].correct || 0
-				sessionData.report[levelName + ' - Salah'] =
-					sessionData.answers_data[levelName].incorrect || 0
+					if (!answers[catName])
+						answers[catName] = { correct: 0, incorrect: 0, indicator_name: catName }
+
+					if (qd.isCorrect === true) {
+						answers[catName].correct += 1
+					} else if (qd.answered === true) {
+						// gunakan "answered" (bukan "answer !== null") karena sesi lama mungkin tidak menyimpan field "answer"
+						answers[catName].incorrect += 1
+					}
+				}
+			}
+
+			// 7) Susun report per peserta
+			const pData = participantMap.get(sess.id_participant.toString()) || null
+			const report = {
+				Nama: pData?.name || '-',
+				Status: sess.test_status === 'completed' ? 'Selesai' : 'Sedang Berlangsung',
+			}
+			for (const [catName, v] of Object.entries(answers)) {
+				report[`${catName} - Benar`] = v.correct
+				report[`${catName} - Salah`] = v.incorrect
+			}
+
+			// 8) Update agregat total & result
+			for (const [catName, v] of Object.entries(answers)) {
+				if (!total[catName]) total[catName] = { correct: 0, incorrect: 0, indicator_name: catName }
+				if (!result[catName])
+					result[catName] = { correct: 0, incorrect: 0, indicator_name: catName }
+				total[catName].correct += v.correct
+				total[catName].incorrect += v.incorrect
+				result[catName].correct += v.correct
+				result[catName].incorrect += v.incorrect
+			}
+
+			// 9) Bentuk payload item untuk tabel
+			response.push({
+				participant_data: pData,
+				session_data: {
+					start: sess.start,
+					end: sess.end,
+					session_token: sess.session_token,
+					test_status: sess.test_status,
+					state: sess.state,
+					id_test: String(sess.id_test),
+					id_participant: String(sess.id_participant),
+					id_user: String(sess.id_user),
+				},
+				answers_data: answers,
+				report,
 			})
-			response.push(sessionData)
 		}
 
-		let total = {}
-		userSessions.forEach(sess => {
-			sess.payload.forEach(item => {
-				const levelName = item.name || `Level ${item.level}`
-				if (!total[levelName]) {
-					total[levelName] = { correct: 0, incorrect: 0 }
-				}
-			})
+		return res.status(200).json({
+			status: 200,
+			message: 'ok',
+			data: { data: response, total, result },
 		})
-
-		response.forEach(sess => {
-			Object.keys(sess.answers_data).forEach(levelName => {
-				if (total[levelName]) {
-					total[levelName].correct += sess.answers_data[levelName].correct || 0
-					total[levelName].incorrect += sess.answers_data[levelName].incorrect || 0
-				}
-			})
-		})
-
-		let result = {}
-		const categories = userSessions[0]?.payload || []
-		for (const cat of categories) {
-			const name = cat.name || `Level ${cat.level}`
-			result[name] = { correct: 0, incorrect: 0, indicator_name: name }
-		}
-		for (const sess of userSessions) {
-			const cats = sess.payload || []
-			for (const q of sess.question_done || []) {
-				const level = q.level
-				const name = cats.find(cat => cat.level === level)?.name || `Level ${level}`
-				if (!result[name]) {
-					result[name] = {
-						correct: q.isCorrect ? 1 : 0,
-						incorrect: !q.isCorrect && q.answer !== null ? 1 : 0,
-						indicator_name: name,
-					}
-				} else {
-					if (q.isCorrect) {
-						result[name].correct++
-					} else if (q.answer !== null) {
-						result[name].incorrect++
-					}
-				}
-			}
-		}
-
-		const finalResponse = {
-			data: response,
-			total: total,
-			result: result,
-		}
-		return res.status(200).json({ status: 200, message: 'ok', data: finalResponse })
 	} catch (error) {
 		console.error('Error fetching participants by instance:', error)
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
