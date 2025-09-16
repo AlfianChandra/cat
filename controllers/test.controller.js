@@ -1271,15 +1271,10 @@ export const getParticipantsByInstance = async (req, res) => {
 			// 9) Bentuk payload item untuk tabel
 			response.push({
 				participant_data: pData,
+				// penting: kirim full session + jaga test_name
 				session_data: {
-					start: sess.start,
-					end: sess.end,
-					session_token: sess.session_token,
-					test_status: sess.test_status,
-					state: sess.state,
-					id_test: String(sess.id_test),
-					id_participant: String(sess.id_participant),
-					id_user: String(sess.id_user),
+					...sess,
+					test_name: sess.test_name || test.name,
 				},
 				answers_data: answers,
 				report,
