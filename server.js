@@ -60,6 +60,7 @@ summNamespace.on('connection', socket => {
         11. Tampilkan Sequence Diagram yang menjelaskan proses tindak lanjut yang direkomendasikan dalam format mermaid
         12. Tampilkan Flowchart yang menjelaskan proses pembelajaran yang direkomendasikan dalam format mermaid
         13. Tampilkan Bar Chart yang membandingkan skor peserta dengan rata-rata kelas dalam format Sintaks Mermaid
+        14. Tampilkan Gantt Chart yang menjelaskan jadwal belajar yang direkomendasikan dalam format mermaid
         
         Produksi analisis yang sangat detail, sangat panjang, dan sangat lengkap. Jangan hasilkan tabel.
         Langsung sumarisasi, jangan gunakan intro, jangan menawarkan analisis lebih lanjut, jangan mengulang pertanyaan pengguna. Hanya hasilkan sumarisasi yang berguna.
