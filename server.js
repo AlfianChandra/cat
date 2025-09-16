@@ -57,8 +57,7 @@ summNamespace.on('connection', socket => {
         8. Rekomendasi/masukan untuk tenaga pengajar
         9. Rekomendasi Pendekatan/Metode mengajar
         10. Tampilkan Pie Chart data keseluruhan skor peserta dalam format Sintaks Mermaid
-        11. Tampilkan Mindmap untuk Rekomendasi Perbaikan atau Tindak Lanjut dalam format Sintaks Mermaid
-        12. Tampilkan Architecture-beta dalam format mermaid
+        11. Tampilkan Architecture-beta dalam format mermaid
 
         ***CONTOH SINTAKS ARCHITECTURE-BETA***
         architecture-beta
