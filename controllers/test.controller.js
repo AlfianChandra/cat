@@ -1143,116 +1143,36 @@ export const getMateriScores = async (req, res) => {
 
 export const getParticipantsByInstance = async (req, res) => {
 	try {
-		const { id_test, id_instance, status } = req.body
-
-		// 1) Validasi test & instance
-		const test = await Test.findById(id_test).lean()
-		if (!test) {
-			return res.status(404).json({ status: 404, message: 'Test tidak ditemukan' })
-		}
-
-		const instance = (test.instances || []).find(i => String(i._id) === String(id_instance))
-		if (!instance) {
-			return res
-				.status(404)
-				.json({ status: 404, message: 'Instansi tidak ditemukan dalam test ini' })
-		}
-
-		// 2) Ambil peserta instansi ini
+		const { id_test, id_instance } = req.body
+		const test = await Test.findById(id_test)
+		const levels = test.questions.length
+		const instance = test.instances.find(i => String(i._id) === String(id_instance))
 		const participants = await Participant.find({ id_instansi: id_instance })
-			.select('-password_string -username_string')
-			.lean()
 
-		if (!participants.length) {
-			return res.status(200).json({
-				status: 200,
-				message: 'ok',
-				data: { data: [], total: {}, result: {} },
+		let sessions = []
+		for (const part of participants) {
+			const userSessions = await TestSession.find({
+				id_test,
+				id_participant: part._id,
+				test_status: 'completed',
 			})
+			sessions.push(...userSessions)
 		}
 
-		const participantMap = new Map(participants.map(p => [String(p._id), p]))
-
-		// 3) Ambil sesi user
-		const sessionFilter = {
-			id_test,
-			id_participant: { $in: participants.map(p => p._id) },
-			test_status: status || 'completed',
+		const levelMap = []
+		for (let i = 0; i < levels; i++) {
+			levelMap.push(test.questions[i].name)
 		}
-
-		// pakai field start, bukan start_date
-		const userSessions = await TestSession.find(sessionFilter).sort({ start: 1 }).lean()
-
-		if (!userSessions.length) {
-			return res.status(200).json({
-				status: 200,
-				message: 'ok',
-				data: { data: [], total: {}, result: {} },
-			})
-		}
-
-		const response = []
-		const total = {}
-		const result = {}
-
-		for (const sess of userSessions) {
-			const answers = {}
-			for (const pack of sess.payload || []) {
-				const name = pack?.name || (pack?.level != null ? `Level ${pack.level}` : 'Tanpa Kategori')
-				answers[name] = { correct: 0, incorrect: 0, indicator_name: name }
-			}
-
-			// Hitung benar/salah cuma dari question_done.isCorrect
-			for (const q of sess.question_done || []) {
-				const name = (sess.payload || []).find(p => p.level === q.level)?.name || `Level ${q.level}`
-				if (!answers[name]) {
-					answers[name] = { correct: 0, incorrect: 0, indicator_name: name }
-				}
-				if (q.isCorrect === true) answers[name].correct += 1
-				if (q.isCorrect === false) answers[name].incorrect += 1
-			}
-
-			// Report per peserta
-			const pData = participantMap.get(String(sess.id_participant)) || null
-			const report = {
-				Nama: pData?.name || '-',
-				Status: sess.test_status === 'completed' ? 'Selesai' : 'Sedang Berlangsung',
-			}
-
-			for (const [cat, v] of Object.entries(answers)) {
-				report[`${cat} - Benar`] = v.correct
-				report[`${cat} - Salah`] = v.incorrect
-			}
-
-			// Total dan result agregat
-			for (const [cat, v] of Object.entries(answers)) {
-				if (!total[cat]) total[cat] = { correct: 0, incorrect: 0, indicator_name: cat }
-				if (!result[cat]) result[cat] = { correct: 0, incorrect: 0, indicator_name: cat }
-				total[cat].correct += v.correct
-				total[cat].incorrect += v.incorrect
-				result[cat].correct += v.correct
-				result[cat].incorrect += v.incorrect
-			}
-
-			response.push({
-				participant_data: pData,
-				session_data: { ...sess, test_name: sess.test_name || test.name },
-				answers_data: answers,
-				report,
-			})
-		}
-
-		// 4) Kirim response
-		return res.status(200).json({
-			status: 200,
-			message: 'ok',
-			data: { data: response, total, result },
-		})
 	} catch (err) {
 		console.error('Error getParticipantsByInstance:', err)
 	}
 }
 
+// export const getParticipantsByInstance = async (req, res) => {
+// 	try {
+// 		const { id_test, id_instance, status } = req.body
+
+// 		// 1) Validasi test & instance
 // 		const test = await Test.findById(id_test).lean()
 // 		if (!test) {
 // 			return res.status(404).json({ status: 404, message: 'Test tidak ditemukan' })
