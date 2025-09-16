@@ -57,20 +57,7 @@ summNamespace.on('connection', socket => {
         8. Rekomendasi/masukan untuk tenaga pengajar
         9. Rekomendasi Pendekatan/Metode mengajar
         10. Tampilkan Pie Chart data keseluruhan skor peserta dalam format Sintaks Mermaid
-        11. Tampilkan Architecture-beta dalam format mermaid
-
-        ***CONTOH SINTAKS ARCHITECTURE-BETA***
-        architecture-beta
-          group api(cloud)[API]
-
-          service db(database)[Database] in api
-          service disk1(disk)[Storage] in api
-          service disk2(disk)[Storage] in api
-          service server(server)[Server] in api
-
-          db:L -- R:server
-          disk1:T -- B:server
-          disk2:T -- B:db
+        11. Tampilkan Sequence Diagram dalam format mermaid
 
         Produksi analisis yang sangat detail, sangat panjang, dan sangat lengkap. Jangan hasilkan tabel.
         Langsung sumarisasi, jangan gunakan intro, jangan menawarkan analisis lebih lanjut, jangan mengulang pertanyaan pengguna. Hanya hasilkan sumarisasi yang berguna.
