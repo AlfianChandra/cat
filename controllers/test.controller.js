@@ -520,7 +520,6 @@ export const answerQuestion = async (req, res) => {
 			testSession.question_done[qDoneIndex].answer_reason = answer_reason || null
 		}
 
-		//Save question_done
 		testSession.markModified('question_done')
 		await testSession.save()
 
