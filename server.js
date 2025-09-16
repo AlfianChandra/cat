@@ -57,6 +57,8 @@ summNamespace.on('connection', socket => {
         8. Rekomendasi/masukan untuk tenaga pengajar
         9. Rekomendasi Pendekatan/Metode mengajar
         10. Tampilkan Pie Chart data keseluruhan skor peserta dalam format Sintaks Mermaid
+        11. Tampilkan Mindmap untuk Rekomendasi Perbaikan atau Tindak Lanjut dalam format Sintaks Mermaid
+        12. Tampilkan XY Chart dengan x-axis adalah peserta dan y-axis adalah skor peserta dalam format Sintaks Mermaid
 
         Produksi analisis yang sangat detail, sangat panjang, dan sangat lengkap. Jangan hasilkan tabel.
         Langsung sumarisasi, jangan gunakan intro, jangan menawarkan analisis lebih lanjut, jangan mengulang pertanyaan pengguna. Hanya hasilkan sumarisasi yang berguna.
