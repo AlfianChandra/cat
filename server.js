@@ -59,9 +59,18 @@ summNamespace.on('connection', socket => {
         10. Tampilkan Pie Chart data keseluruhan skor peserta dalam format Sintaks Mermaid
         11. Tampilkan Sequence Diagram yang menjelaskan proses tindak lanjut yang direkomendasikan dalam format mermaid
         12. Tampilkan Flowchart yang menjelaskan proses pembelajaran yang direkomendasikan dalam format mermaid
-        13. Tampilkan Bar Chart yang membandingkan skor peserta dengan rata-rata kelas dalam format Sintaks Mermaid
+        13. Tampilkan XYchart yang membandingkan skor peserta dengan rata-rata kelas dalam format Sintaks Mermaid
         14. Tampilkan Gantt Chart yang menjelaskan jadwal belajar yang direkomendasikan dalam format mermaid
-        
+
+        ***FORMAT XYCHART***
+        xychart
+          title "Sales Revenue"
+          x-axis [jan, feb, mar, apr, may, jun, jul, aug, sep, oct, nov, dec]
+          y-axis "Revenue (in $)" 4000 --> 11000
+          bar [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
+          line [5000, 6000, 7500, 8200, 9500, 10500, 11000, 10200, 9200, 8500, 7000, 6000]
+
+
         Produksi analisis yang sangat detail, sangat panjang, dan sangat lengkap. Jangan hasilkan tabel.
         Langsung sumarisasi, jangan gunakan intro, jangan menawarkan analisis lebih lanjut, jangan mengulang pertanyaan pengguna. Hanya hasilkan sumarisasi yang berguna.
         `,
