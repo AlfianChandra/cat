@@ -1141,11 +1141,118 @@ export const getMateriScores = async (req, res) => {
 	}
 }
 
-// export const getParticipantsByInstance = async (req, res) => {
-// 	try {
-// 		const { id_test, id_instance, status } = req.body
+export const getParticipantsByInstance = async (req, res) => {
+	try {
+		const { id_test, id_instance, status } = req.body
 
-// 		// 1) Validasi test & instance
+		// 1) Validasi test & instance
+		const test = await Test.findById(id_test).lean()
+		if (!test) {
+			return res.status(404).json({ status: 404, message: 'Test tidak ditemukan' })
+		}
+
+		const instance = (test.instances || []).find(i => String(i._id) === String(id_instance))
+		if (!instance) {
+			return res
+				.status(404)
+				.json({ status: 404, message: 'Instansi tidak ditemukan dalam test ini' })
+		}
+
+		// 2) Ambil peserta instansi ini
+		const participants = await Participant.find({ id_instansi: id_instance })
+			.select('-password_string -username_string')
+			.lean()
+
+		if (!participants.length) {
+			return res.status(200).json({
+				status: 200,
+				message: 'ok',
+				data: { data: [], total: {}, result: {} },
+			})
+		}
+
+		const participantMap = new Map(participants.map(p => [String(p._id), p]))
+
+		// 3) Ambil sesi user
+		const sessionFilter = {
+			id_test,
+			id_participant: { $in: participants.map(p => p._id) },
+			test_status: status || 'completed',
+		}
+
+		// pakai field start, bukan start_date
+		const userSessions = await TestSession.find(sessionFilter).sort({ start: 1 }).lean()
+
+		if (!userSessions.length) {
+			return res.status(200).json({
+				status: 200,
+				message: 'ok',
+				data: { data: [], total: {}, result: {} },
+			})
+		}
+
+		const response = []
+		const total = {}
+		const result = {}
+
+		for (const sess of userSessions) {
+			const answers = {}
+			for (const pack of sess.payload || []) {
+				const name = pack?.name || (pack?.level != null ? `Level ${pack.level}` : 'Tanpa Kategori')
+				answers[name] = { correct: 0, incorrect: 0, indicator_name: name }
+			}
+
+			// Hitung benar/salah cuma dari question_done.isCorrect
+			for (const q of sess.question_done || []) {
+				const name = (sess.payload || []).find(p => p.level === q.level)?.name || `Level ${q.level}`
+				if (!answers[name]) {
+					answers[name] = { correct: 0, incorrect: 0, indicator_name: name }
+				}
+				if (q.isCorrect === true) answers[name].correct += 1
+				if (q.isCorrect === false) answers[name].incorrect += 1
+			}
+
+			// Report per peserta
+			const pData = participantMap.get(String(sess.id_participant)) || null
+			const report = {
+				Nama: pData?.name || '-',
+				Status: sess.test_status === 'completed' ? 'Selesai' : 'Sedang Berlangsung',
+			}
+
+			for (const [cat, v] of Object.entries(answers)) {
+				report[`${cat} - Benar`] = v.correct
+				report[`${cat} - Salah`] = v.incorrect
+			}
+
+			// Total dan result agregat
+			for (const [cat, v] of Object.entries(answers)) {
+				if (!total[cat]) total[cat] = { correct: 0, incorrect: 0, indicator_name: cat }
+				if (!result[cat]) result[cat] = { correct: 0, incorrect: 0, indicator_name: cat }
+				total[cat].correct += v.correct
+				total[cat].incorrect += v.incorrect
+				result[cat].correct += v.correct
+				result[cat].incorrect += v.incorrect
+			}
+
+			response.push({
+				participant_data: pData,
+				session_data: { ...sess, test_name: sess.test_name || test.name },
+				answers_data: answers,
+				report,
+			})
+		}
+
+		// 4) Kirim response
+		return res.status(200).json({
+			status: 200,
+			message: 'ok',
+			data: { data: response, total, result },
+		})
+	} catch (err) {
+		console.error('Error getParticipantsByInstance:', err)
+	}
+}
+
 // 		const test = await Test.findById(id_test).lean()
 // 		if (!test) {
 // 			return res.status(404).json({ status: 404, message: 'Test tidak ditemukan' })
@@ -1253,182 +1360,182 @@ export const getMateriScores = async (req, res) => {
 // 	}
 // }
 
-export const getParticipantsByInstance = async (req, res) => {
-	try {
-		const { id_test, id_instance, status } = req.body
+// export const getParticipantsByInstance = async (req, res) => {
+// 	try {
+// 		const { id_test, id_instance, status } = req.body
 
-		// Validasi test
-		const test = await Test.findById(id_test)
-		if (!test) {
-			return res.status(404).json({ status: 404, message: 'Test tidak ditemukan' })
-		}
+// 		// Validasi test
+// 		const test = await Test.findById(id_test)
+// 		if (!test) {
+// 			return res.status(404).json({ status: 404, message: 'Test tidak ditemukan' })
+// 		}
 
-		// Validasi instance
-		const instance = test.instances.find(inst => inst._id.toString() === id_instance)
-		if (!instance) {
-			return res
-				.status(404)
-				.json({ status: 404, message: 'Instansi tidak ditemukan dalam test ini' })
-		}
+// 		// Validasi instance
+// 		const instance = test.instances.find(inst => inst._id.toString() === id_instance)
+// 		if (!instance) {
+// 			return res
+// 				.status(404)
+// 				.json({ status: 404, message: 'Instansi tidak ditemukan dalam test ini' })
+// 		}
 
-		// Ambil participants
-		const participants = await Participant.find({ id_instansi: id_instance })
-			.select('-password_string -username_string')
-			.lean()
+// 		// Ambil participants
+// 		const participants = await Participant.find({ id_instansi: id_instance })
+// 			.select('-password_string -username_string')
+// 			.lean()
 
-		if (participants.length === 0) {
-			return res.status(404).json({ status: 404, message: 'Tidak ada peserta ditemukan' })
-		}
+// 		if (participants.length === 0) {
+// 			return res.status(404).json({ status: 404, message: 'Tidak ada peserta ditemukan' })
+// 		}
 
-		// Ambil user sessions dengan filter status
-		const sessionQuery = {
-			id_test,
-			id_participant: { $in: participants.map(p => p._id) },
-		}
+// 		// Ambil user sessions dengan filter status
+// 		const sessionQuery = {
+// 			id_test,
+// 			id_participant: { $in: participants.map(p => p._id) },
+// 		}
 
-		if (status) {
-			sessionQuery.test_status = status
-		}
+// 		if (status) {
+// 			sessionQuery.test_status = status
+// 		}
 
-		const userSessions = await TestSession.find(sessionQuery).sort({ start: 1 })
+// 		const userSessions = await TestSession.find(sessionQuery).sort({ start: 1 })
 
-		if (userSessions.length === 0) {
-			return res.status(404).json({ status: 404, message: 'Tidak ada sesi test ditemukan' })
-		}
+// 		if (userSessions.length === 0) {
+// 			return res.status(404).json({ status: 404, message: 'Tidak ada sesi test ditemukan' })
+// 		}
 
-		// Proses data response
-		const firstSession = userSessions[0]
-		const levelStructure = {}
+// 		// Proses data response
+// 		const firstSession = userSessions[0]
+// 		const levelStructure = {}
 
-		if (firstSession && firstSession.payload) {
-			firstSession.payload.forEach(item => {
-				const levelName = item.name || `Level ${item.level}`
-				levelStructure[levelName] = { correct: 0, incorrect: 0 }
-			})
-		}
+// 		if (firstSession && firstSession.payload) {
+// 			firstSession.payload.forEach(item => {
+// 				const levelName = item.name || `Level ${item.level}`
+// 				levelStructure[levelName] = { correct: 0, incorrect: 0 }
+// 			})
+// 		}
 
-		const sessionMaps = new Map()
-		let response = []
-		for (const sess of userSessions) {
-			const idParticipant = sess.id_participant.toString()
-			const participantData = participants.find(p => p._id.toString() === idParticipant)
-			let sessionData = {}
-			sessionData.session_data = sess
-			if (participantData) {
-				sessionData.participant_data = participantData
-			}
-			let answers = {}
-			let questionLevelMap = {}
-			// initialize answer counters per level name and map questions to their level
-			sess.payload.forEach(item => {
-				const levelName = item.name || `Level ${item.level}`
-				answers[levelName] = {
-					correct: 0,
-					incorrect: 0,
-				}
-				;(item.questions || []).forEach(q => {
-					if (q.no != null) questionLevelMap[String(q.no)] = levelName
-					if (q.id_question) questionLevelMap[String(q.id_question)] = levelName
-					if (q.question_data?.id_question)
-						questionLevelMap[String(q.question_data.id_question)] = levelName
-				})
-			})
+// 		const sessionMaps = new Map()
+// 		let response = []
+// 		for (const sess of userSessions) {
+// 			const idParticipant = sess.id_participant.toString()
+// 			const participantData = participants.find(p => p._id.toString() === idParticipant)
+// 			let sessionData = {}
+// 			sessionData.session_data = sess
+// 			if (participantData) {
+// 				sessionData.participant_data = participantData
+// 			}
+// 			let answers = {}
+// 			let questionLevelMap = {}
+// 			// initialize answer counters per level name and map questions to their level
+// 			sess.payload.forEach(item => {
+// 				const levelName = item.name || `Level ${item.level}`
+// 				answers[levelName] = {
+// 					correct: 0,
+// 					incorrect: 0,
+// 				}
+// 				;(item.questions || []).forEach(q => {
+// 					if (q.no != null) questionLevelMap[String(q.no)] = levelName
+// 					if (q.id_question) questionLevelMap[String(q.id_question)] = levelName
+// 					if (q.question_data?.id_question)
+// 						questionLevelMap[String(q.question_data.id_question)] = levelName
+// 				})
+// 			})
 
-			// tally correct and incorrect answers from question_done
-			sess.question_done.forEach(q => {
-				const levelName =
-					questionLevelMap[String(q.no)] ||
-					questionLevelMap[String(q.id_question)] ||
-					questionLevelMap[String(q.question_data?.id_question)]
-				if (!answers[levelName]) return
-				if (q.isCorrect === true) {
-					answers[levelName].correct += 1
-				} else if (q.isCorrect === false) {
-					answers[levelName].incorrect += 1
-				}
-			})
+// 			// tally correct and incorrect answers from question_done
+// 			sess.question_done.forEach(q => {
+// 				const levelName =
+// 					questionLevelMap[String(q.no)] ||
+// 					questionLevelMap[String(q.id_question)] ||
+// 					questionLevelMap[String(q.question_data?.id_question)]
+// 				if (!answers[levelName]) return
+// 				if (q.isCorrect === true) {
+// 					answers[levelName].correct += 1
+// 				} else if (q.isCorrect === false) {
+// 					answers[levelName].incorrect += 1
+// 				}
+// 			})
 
-			sessionMaps.set(sess._id.toString(), questionLevelMap)
+// 			sessionMaps.set(sess._id.toString(), questionLevelMap)
 
-			sessionData.answers_data = answers
-			sessionData.report = {
-				Nama: participantData?.name,
-				Status: sess.test_status == 'completed' ? 'Selesai' : 'Sedang Berlangsung',
-			}
+// 			sessionData.answers_data = answers
+// 			sessionData.report = {
+// 				Nama: participantData?.name,
+// 				Status: sess.test_status == 'completed' ? 'Selesai' : 'Sedang Berlangsung',
+// 			}
 
-			Object.keys(sessionData.answers_data).forEach(levelName => {
-				sessionData.report[levelName + ' - Benar'] =
-					sessionData.answers_data[levelName].correct || 0
-				sessionData.report[levelName + ' - Salah'] =
-					sessionData.answers_data[levelName].incorrect || 0
-			})
-			response.push(sessionData)
-		}
+// 			Object.keys(sessionData.answers_data).forEach(levelName => {
+// 				sessionData.report[levelName + ' - Benar'] =
+// 					sessionData.answers_data[levelName].correct || 0
+// 				sessionData.report[levelName + ' - Salah'] =
+// 					sessionData.answers_data[levelName].incorrect || 0
+// 			})
+// 			response.push(sessionData)
+// 		}
 
-		let total = {}
-		userSessions.forEach(sess => {
-			sess.payload.forEach(item => {
-				const levelName = item.name || `Level ${item.level}`
-				if (!total[levelName]) {
-					total[levelName] = { correct: 0, incorrect: 0 }
-				}
-			})
-		})
+// 		let total = {}
+// 		userSessions.forEach(sess => {
+// 			sess.payload.forEach(item => {
+// 				const levelName = item.name || `Level ${item.level}`
+// 				if (!total[levelName]) {
+// 					total[levelName] = { correct: 0, incorrect: 0 }
+// 				}
+// 			})
+// 		})
 
-		response.forEach(sess => {
-			Object.keys(sess.answers_data).forEach(levelName => {
-				if (total[levelName]) {
-					total[levelName].correct += sess.answers_data[levelName].correct || 0
-					total[levelName].incorrect += sess.answers_data[levelName].incorrect || 0
-				}
-			})
-		})
+// 		response.forEach(sess => {
+// 			Object.keys(sess.answers_data).forEach(levelName => {
+// 				if (total[levelName]) {
+// 					total[levelName].correct += sess.answers_data[levelName].correct || 0
+// 					total[levelName].incorrect += sess.answers_data[levelName].incorrect || 0
+// 				}
+// 			})
+// 		})
 
-		let result = {}
-		const categories = userSessions[0]?.payload || []
-		for (const cat of categories) {
-			const name = cat.name || `Level ${cat.level}`
-			result[name] = { correct: 0, incorrect: 0, indicator_name: name }
-		}
-		for (const sess of userSessions) {
-			const map = sessionMaps.get(sess._id.toString()) || {}
-			for (const q of sess.question_done || []) {
-				const levelName =
-					map[String(q.no)] ||
-					map[String(q.id_question)] ||
-					map[String(q.question_data?.id_question)]
-				if (!levelName) continue
-				if (!result[levelName]) {
-					result[levelName] = { correct: 0, incorrect: 0, indicator_name: levelName }
-				}
-				if (q.isCorrect === true) {
-					result[levelName].correct++
-				} else if (q.isCorrect === false) {
-					result[levelName].incorrect++
-				}
-			}
-		}
+// 		let result = {}
+// 		const categories = userSessions[0]?.payload || []
+// 		for (const cat of categories) {
+// 			const name = cat.name || `Level ${cat.level}`
+// 			result[name] = { correct: 0, incorrect: 0, indicator_name: name }
+// 		}
+// 		for (const sess of userSessions) {
+// 			const map = sessionMaps.get(sess._id.toString()) || {}
+// 			for (const q of sess.question_done || []) {
+// 				const levelName =
+// 					map[String(q.no)] ||
+// 					map[String(q.id_question)] ||
+// 					map[String(q.question_data?.id_question)]
+// 				if (!levelName) continue
+// 				if (!result[levelName]) {
+// 					result[levelName] = { correct: 0, incorrect: 0, indicator_name: levelName }
+// 				}
+// 				if (q.isCorrect === true) {
+// 					result[levelName].correct++
+// 				} else if (q.isCorrect === false) {
+// 					result[levelName].incorrect++
+// 				}
+// 			}
+// 		}
 
-		const finalResponse = {
-			data: response,
-			total: total,
-			result: result,
-		}
+// 		const finalResponse = {
+// 			data: response,
+// 			total: total,
+// 			result: result,
+// 		}
 
-		return res.status(200).json({
-			status: 200,
-			message: 'ok',
-			data: finalResponse,
-		})
-	} catch (error) {
-		console.error('Error fetching participants by instance:', error)
-		return res.status(500).json({
-			status: 500,
-			message: 'Terjadi kesalahan server',
-			error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-		})
-	}
-}
+// 		return res.status(200).json({
+// 			status: 200,
+// 			message: 'ok',
+// 			data: finalResponse,
+// 		})
+// 	} catch (error) {
+// 		console.error('Error fetching participants by instance:', error)
+// 		return res.status(500).json({
+// 			status: 500,
+// 			message: 'Terjadi kesalahan server',
+// 			error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+// 		})
+// 	}
+// }
 
 export const setAsCompleted = async (req, res) => {
 	try {
