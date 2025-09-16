@@ -58,7 +58,9 @@ summNamespace.on('connection', socket => {
         9. Rekomendasi Pendekatan/Metode mengajar
         10. Tampilkan Pie Chart data keseluruhan skor peserta dalam format Sintaks Mermaid
         11. Tampilkan Sequence Diagram yang menjelaskan proses tindak lanjut yang direkomendasikan dalam format mermaid
-
+        12. Tampilkan Flowchart yang menjelaskan proses pembelajaran yang direkomendasikan dalam format mermaid
+        13. Tampilkan Bar Chart yang membandingkan skor peserta dengan rata-rata kelas dalam format Sintaks Mermaid
+        
         Produksi analisis yang sangat detail, sangat panjang, dan sangat lengkap. Jangan hasilkan tabel.
         Langsung sumarisasi, jangan gunakan intro, jangan menawarkan analisis lebih lanjut, jangan mengulang pertanyaan pengguna. Hanya hasilkan sumarisasi yang berguna.
         `,
