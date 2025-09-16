@@ -1160,11 +1160,17 @@ export const getParticipantsByInstance = async (req, res) => {
 		}
 
 		const levelMap = []
+		const scoreMap = {}
 		for (let i = 0; i < levels; i++) {
 			levelMap.push(test.questions[i].name)
+			scoreMap[test.questions[i].name] = {
+				correct: 0,
+				incorrect: 0,
+				indicator_name: test.questions[i].name,
+			}
 		}
 
-		return res.status(200).json({ status: 200, message: 'ok', data: levelMap })
+		return res.status(200).json({ status: 200, message: 'ok', data: { levelMap, scoreMap } })
 	} catch (err) {
 		console.error('Error getParticipantsByInstance:', err)
 	}
