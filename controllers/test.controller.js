@@ -1163,6 +1163,8 @@ export const getParticipantsByInstance = async (req, res) => {
 		for (let i = 0; i < levels; i++) {
 			levelMap.push(test.questions[i].name)
 		}
+
+		return res.status(200).json({ status: 200, message: 'ok', data: levelMap })
 	} catch (err) {
 		console.error('Error getParticipantsByInstance:', err)
 	}
