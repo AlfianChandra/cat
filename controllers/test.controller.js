@@ -1167,7 +1167,7 @@ export const getParticipantsByInstance = async (req, res) => {
 				correct: 0,
 				incorrect: 0,
 				indicator_name: test.questions[i].name,
-				level: i + 1,
+				level: i,
 			}
 		}
 
