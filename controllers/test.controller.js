@@ -1147,94 +1147,84 @@ export const getParticipantsByInstance = async (req, res) => {
 
 		// 1) Validasi test & instance
 		const test = await Test.findById(id_test).lean()
-		if (!test) return res.status(404).json({ status: 404, message: 'Test tidak ditemukan' })
+		if (!test) {
+			return res.status(404).json({ status: 404, message: 'Test tidak ditemukan' })
+		}
 
 		const instance = (test.instances || []).find(i => String(i._id) === String(id_instance))
-		if (!instance)
+		if (!instance) {
 			return res
 				.status(404)
 				.json({ status: 404, message: 'Instansi tidak ditemukan dalam test ini' })
+		}
 
-		// 2) Peserta di instansi ini
+		// 2) Ambil peserta instansi ini
 		const participants = await Participant.find({ id_instansi: id_instance })
 			.select('-password_string -username_string')
 			.lean()
 
 		if (!participants.length) {
-			return res
-				.status(200)
-				.json({ status: 200, message: 'ok', data: { data: [], total: {}, result: {} } })
+			return res.status(200).json({
+				status: 200,
+				message: 'ok',
+				data: { data: [], total: {}, result: {} },
+			})
 		}
 
-		const pMap = new Map(participants.map(p => [String(p._id), p]))
+		const participantMap = new Map(participants.map(p => [String(p._id), p]))
 
-		// 3) Ambil sesi
-		const filter = {
+		// 3) Ambil sesi user
+		const sessionFilter = {
 			id_test,
 			id_participant: { $in: participants.map(p => p._id) },
 			test_status: status || 'completed',
 		}
-		const sessions = await TestSession.find(filter).sort({ start: 1 }).lean()
 
-		if (!sessions.length) {
-			return res
-				.status(200)
-				.json({ status: 200, message: 'ok', data: { data: [], total: {}, result: {} } })
+		// pakai field start, bukan start_date
+		const userSessions = await TestSession.find(sessionFilter).sort({ start: 1 }).lean()
+
+		if (!userSessions.length) {
+			return res.status(200).json({
+				status: 200,
+				message: 'ok',
+				data: { data: [], total: {}, result: {} },
+			})
 		}
 
-		const data = []
+		const response = []
 		const total = {}
 		const result = {}
 
-		for (const sess of sessions) {
-			// --- Peta kategori dari payload (buat ngelompokkan) ---
+		for (const sess of userSessions) {
 			const answers = {}
-			const mapByNo = new Map()
-			const mapByQid = new Map()
-
 			for (const pack of sess.payload || []) {
-				const cat = pack?.name || (pack?.level != null ? `Level ${pack.level}` : 'Tanpa Kategori')
-				if (!answers[cat]) answers[cat] = { correct: 0, incorrect: 0, indicator_name: cat }
-
-				for (const q of pack.questions || []) {
-					if (q?.no != null) mapByNo.set(String(q.no), cat)
-					if (q?.id_question) mapByQid.set(String(q.id_question), cat)
-				}
+				const name = pack?.name || (pack?.level != null ? `Level ${pack.level}` : 'Tanpa Kategori')
+				answers[name] = { correct: 0, incorrect: 0, indicator_name: name }
 			}
 
-			// --- Hitung dari question_done saja (sesuai request) ---
-			for (const qd of sess.question_done || []) {
-				// cari kategori: by no -> by question_id -> by level -> fallback
-				const cat =
-					mapByNo.get(String(qd?.no)) ||
-					mapByQid.get(String(qd?.question_data?.id_question)) ||
-					(qd?.level != null
-						? (sess.payload || []).find(p => p.level === qd.level)?.name || `Level ${qd.level}`
-						: null) ||
-					'Tanpa Kategori'
-
-				if (!answers[cat]) answers[cat] = { correct: 0, incorrect: 0, indicator_name: cat }
-
-				if (qd.isCorrect === true) {
-					answers[cat].correct += 1
-				} else if (qd.isCorrect === false) {
-					answers[cat].incorrect += 1 // <-- SALAH dari isCorrect === false
+			// Hitung benar/salah cuma dari question_done.isCorrect
+			for (const q of sess.question_done || []) {
+				const name = (sess.payload || []).find(p => p.level === q.level)?.name || `Level ${q.level}`
+				if (!answers[name]) {
+					answers[name] = { correct: 0, incorrect: 0, indicator_name: name }
 				}
-				// nilai null/undefined diabaikan (bukan benar/bukan salah)
+				if (q.isCorrect === true) answers[name].correct += 1
+				if (q.isCorrect === false) answers[name].incorrect += 1
 			}
 
-			// --- Susun report & agregat ---
-			const pData = pMap.get(String(sess.id_participant)) || null
-
+			// Report per peserta
+			const pData = participantMap.get(String(sess.id_participant)) || null
 			const report = {
 				Nama: pData?.name || '-',
 				Status: sess.test_status === 'completed' ? 'Selesai' : 'Sedang Berlangsung',
 			}
+
 			for (const [cat, v] of Object.entries(answers)) {
 				report[`${cat} - Benar`] = v.correct
 				report[`${cat} - Salah`] = v.incorrect
 			}
 
+			// Total dan result agregat
 			for (const [cat, v] of Object.entries(answers)) {
 				if (!total[cat]) total[cat] = { correct: 0, incorrect: 0, indicator_name: cat }
 				if (!result[cat]) result[cat] = { correct: 0, incorrect: 0, indicator_name: cat }
@@ -1244,17 +1234,21 @@ export const getParticipantsByInstance = async (req, res) => {
 				result[cat].incorrect += v.incorrect
 			}
 
-			data.push({
+			response.push({
 				participant_data: pData,
-				session_data: { ...sess, test_name: sess.test_name || test.name }, // tetap kirim full dokumen sesi
+				session_data: { ...sess, test_name: sess.test_name || test.name },
 				answers_data: answers,
 				report,
 			})
 		}
 
-		return res.status(200).json({ status: 200, message: 'ok', data: { data, total, result } })
-	} catch (err) {
-		console.error('Error getParticipantsByInstance:', err)
+		return res.status(200).json({
+			status: 200,
+			message: 'ok',
+			data: { data: response, total, result },
+		})
+	} catch (error) {
+		console.error('Error getParticipantsByInstance:', error)
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
 	}
 }
