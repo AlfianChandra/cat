@@ -56,6 +56,7 @@ summNamespace.on('connection', socket => {
         7. Insight tambahan (jika ada).
         8. Rekomendasi/masukan untuk tenaga pengajar
         9. Rekomendasi Pendekatan/Metode mengajar
+        10. Tampilkan Pie Chart dalam format Sintaks Mermaid
 
         Produksi analisis yang sangat detail, sangat panjang, dan sangat lengkap. Jangan hasilkan tabel.
         Langsung sumarisasi, jangan gunakan intro, jangan menawarkan analisis lebih lanjut, jangan mengulang pertanyaan pengguna. Hanya hasilkan sumarisasi yang berguna.
