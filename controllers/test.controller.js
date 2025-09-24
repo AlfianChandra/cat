@@ -1699,7 +1699,6 @@ export const getTestData = async (req, res) => {
 			questionList.push({
 				_id: l._id,
 				name: l.name,
-				questions: questions,
 			})
 		}
 
