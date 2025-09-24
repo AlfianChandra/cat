@@ -19,6 +19,14 @@ export const startValidation = async (req, res) => {
 		const user = await User.findById(userId)
 		const idParticipant = user.id_participant
 
+		const exist = await ValidationSession.findOne({
+			id_user: userId,
+			id_category: id,
+			test_status: 'in_progress',
+		})
+		if (exist) {
+			return res.status(200).json({ status: 200, message: 'Validation started', data: exist })
+		}
 		let data = {}
 		data['id_category'] = id
 		data['id_participant'] = idParticipant
