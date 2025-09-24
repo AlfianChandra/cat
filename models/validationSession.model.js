@@ -1,15 +1,19 @@
 import mongoose from 'mongoose'
-const testSessionSchema = new mongoose.Schema({
+const valSchema = mongoose.Schema({
 	id_user: {
 		type: mongoose.Schema.Types.ObjectId,
 		required: true,
+		ref: 'User',
 	},
 	id_participant: {
 		type: mongoose.Schema.Types.ObjectId,
 		required: true,
+		ref: 'Participant',
 	},
-	id_test: {
+	id_category: {
 		type: mongoose.Schema.Types.ObjectId,
+		required: true,
+		ref: 'QuestionCat',
 	},
 	start: {
 		type: Date,
@@ -19,28 +23,15 @@ const testSessionSchema = new mongoose.Schema({
 		type: Date,
 		required: true,
 	},
-	test_token: {
+	test_status: {
 		type: String,
-		required: true,
-		unique: true,
-	},
-	payload: {
-		type: Array,
-		required: true,
-	},
-	session_token: {
-		type: String,
-		required: true,
+		enum: ['not_started', 'in_progress', 'completed'],
+		default: 'not_started',
 	},
 	question_done: {
 		type: Array,
 		required: false,
 		default: [],
-	},
-	test_status: {
-		type: String,
-		enum: ['not_started', 'in_progress', 'completed'],
-		default: 'not_started',
 	},
 	state: {
 		type: Object,
@@ -48,4 +39,5 @@ const testSessionSchema = new mongoose.Schema({
 	},
 })
 
-export const TestSession = mongoose.model('TestSession', testSessionSchema)
+export const ValidationSession = mongoose.model('ValidationSession', valSchema)
+export default ValidationSession

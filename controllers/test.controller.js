@@ -6,15 +6,57 @@ import { Participant } from '../models/participant.model.js'
 import { Materi } from '../models/materi.model.js'
 import { TestSession } from '../models/testSession.model.js'
 import moment from 'moment'
+import ValidationSession from '../models/validationSession.model.js'
 import bcrypt from 'bcrypt'
 import QuestionCat from '../models/questionCat.model.js'
 import { gradeAnswer } from '../services/answer.js'
 
-export const getValidationQuesions = async (req, res) => {
+export const startValidation = async (req, res) => {
 	try {
 		const { id } = req.body
+		const userId = req.user.id
+
+		const user = await User.findById(userId)
+		const idParticipant = user.id_participant
+
+		let data = {}
+		data['id_category'] = id
+		data['id_participant'] = idParticipant
+		data['id_user'] = userId
+
+		const limit = 120
+		const startTest = moment().toDate()
+		const endTest = moment(startTest).add(limit, 'minutes').toDate()
+		const sessionToken = `${Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}-${Math.random().toString(36).substring(2, 9)}`
+
+		data['start'] = startTest
+		data['end'] = endTest
+		data['test_status'] = 'in_progress'
+		data['test_token'] = sessionToken
+		data['state'] = {
+			current_question: 1,
+			current_level: 1,
+		}
+		let qMaps = []
+		//Get questions
 		const questions = await Question.find({ id_category: id })
-		return res.status(200).json({ message: 'ok', data: questions })
+		let n = 0
+		for (const q of questions) {
+			n++
+			qMaps.push({
+				no: n,
+				answered: false,
+				correct: false,
+				id_answer: '',
+				id_question: q._id,
+			})
+		}
+		data['question_done'] = qMaps
+
+		const valSession = new ValidationSession(data)
+		await valSession.save()
+
+		return res.status(200).json({ status: 200, message: 'Validation started', data: valSession })
 	} catch (error) {
 		console.error('Error fetching validation questions:', error)
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
