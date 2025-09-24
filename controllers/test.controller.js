@@ -1695,7 +1695,7 @@ export const getTestData = async (req, res) => {
 		const categories = test.questions
 		for (const l of categories) {
 			const idCategory = l._id.toString()
-			const questions = qs.filter(item => item.id_category.toString === idCategory)
+			const questions = qs.filter(item => item.id_category.toString() === idCategory)
 			questionList.push({
 				_id: l._id,
 				name: l.name,
