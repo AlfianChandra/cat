@@ -27,7 +27,7 @@ const {
 	setAsCompleted,
 	getSescatDetail,
 	getTestData,
-	getValidationQuestions,
+	getValidationQuesions,
 } = await import('../controllers/test.controller.js')
 import { webmasterOnly, userOnly } from '../middlewares/restrictions.middleware.js'
 const router = express.Router()
