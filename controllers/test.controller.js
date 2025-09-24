@@ -1673,3 +1673,41 @@ export const fcGetParticipantReport = params => {
 		res(result)
 	})
 }
+
+export const getTestData = async (req, res) => {
+	try {
+		const { id_test } = req.body
+		const userId = req.user.id
+		const user = await User.findById(userId)
+		const idParticipant = user.id_participant
+		const partData = await Participant.findById(idParticipant)
+		const test = await Test.findById(id_test)
+
+		const idInstance = partData.id_instansi.toString()
+		const isInstance = test.instances.some(item => item._id === idInstance) //bo ol
+		if (!isInstance) {
+			return res.status(404).json({ message: 'Eh ngga ketemu. Stop jangan lanjyut' })
+		}
+
+		let questionList = []
+		const qs = await Question.find()
+		//jika ono
+		const categories = test.questions
+		for (const l of categories) {
+			const idCategory = l._id.toString()
+			const questions = qs.filter(item => item.id_category === idCategory)
+			questionList.push({
+				_id: l._id,
+				name: l.name,
+				questions: questions,
+			})
+		}
+
+		return res.status(200).json({
+			message: 'ok',
+			data: questionList,
+		})
+	} catch (err) {
+		return res.status(500).json({ message: err })
+	}
+}
