@@ -25,8 +25,9 @@ const {
 	getQuestion,
 	answerQuestion,
 	setAsCompleted,
-  getSescatDetail,
-  getTestData
+	getSescatDetail,
+	getTestData,
+	getValidationQuestions,
 } = await import('../controllers/test.controller.js')
 import { webmasterOnly, userOnly } from '../middlewares/restrictions.middleware.js'
 const router = express.Router()
@@ -54,6 +55,7 @@ router.get('/session/user', userOnly, getUserSessions)
 router.post('/session/questioncat/detail', webmasterOnly, getSescatDetail)
 
 router.post('/data/get', userOnly, getTestData)
+router.post('/validation/question', userOnly, getValidationQuesions)
 
 // Recalculate participant answer correctness
 router.post('/session/fixanswers', webmasterOnly, fixParticipantAnswers)
@@ -63,6 +65,5 @@ router.post('/participants/byinstance/get', webmasterOnly, getParticipantsByInst
 router.post('/get/soal', webmasterOnly, getSoalData)
 router.post('/report/get', webmasterOnly, getTestReport)
 router.post('/report/materi', webmasterOnly, getMateriScores)
-
 
 export default router

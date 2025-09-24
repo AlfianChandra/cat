@@ -10,6 +10,17 @@ import bcrypt from 'bcrypt'
 import QuestionCat from '../models/questionCat.model.js'
 import { gradeAnswer } from '../services/answer.js'
 
+export const getValidationQuesions = async (req, res) => {
+	try {
+		const { id } = req.body
+		const questions = await Question.find({ id_category: id })
+		return res.status(200).json({ message: 'ok', data: questions })
+	} catch (error) {
+		console.error('Error fetching validation questions:', error)
+		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
+	}
+}
+
 export const getSoalData = async (req, res) => {
 	try {
 		const { id_question } = req.body
