@@ -1786,15 +1786,15 @@ export const getValidationQuestion = async (req, res) => {
 				.json({ status: 200, message: 'Sesi sudah selesai', completed: true, data: null })
 		}
 
-		const qMap = test.question_done
-		if (current >= qMap.length) {
-			return res.status(200).json({
-				status: 200,
-				message: 'ok',
-				data: null,
-				completed: true,
-			})
-		}
+		// const qMap = test.question_done
+		// if (current >= qMap.length) {
+		// 	return res.status(200).json({
+		// 		status: 200,
+		// 		message: 'ok',
+		// 		data: null,
+		// 		completed: true,
+		// 	})
+		// }
 		const qMeta = qMap.find(q => q.no === current)
 
 		if (!qMeta) {
