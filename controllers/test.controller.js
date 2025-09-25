@@ -1780,7 +1780,21 @@ export const getValidationQuestion = async (req, res) => {
 			return res.status(404).json({ status: 404, message: 'Sesi tidak ditemukan' })
 		}
 
+		if (test.test_status === 'completed') {
+			return res
+				.status(200)
+				.json({ status: 200, message: 'Sesi sudah selesai', completed: true, data: null })
+		}
+
 		const qMap = test.question_done
+		if (current >= qMap.length) {
+			return res.status(200).json({
+				status: 200,
+				message: 'ok',
+				data: null,
+				completed: true,
+			})
+		}
 		const qMeta = qMap.find(q => q.no === current)
 
 		if (!qMeta) {
@@ -1805,6 +1819,7 @@ export const getValidationQuestion = async (req, res) => {
 			status: 200,
 			message: 'ok',
 			data: question,
+			completed: false,
 		})
 	} catch (err) {
 		console.error('Error fetching validation question:', err)
@@ -1825,6 +1840,7 @@ export const answerValidationQuestion = async (req, res) => {
 		const questionAnswer = question.answers.find(a => a.id_answer === idAnswer)
 		const isCorrect = questionAnswer.is_correct
 		const currentQuestion = test.state.current_question
+		const qs = test.question_done
 		const questionDone = test.question_done.find(q => q.no === currentQuestion)
 		if (!questionDone) {
 			return res.status(404).json({ status: 404, message: 'Soal tidak ditemukan di sesi' })
@@ -1834,7 +1850,11 @@ export const answerValidationQuestion = async (req, res) => {
 		questionDone.correct = isCorrect
 		questionDone.id_answer = idAnswer
 		test.markModified('question_done')
-		test.state.current_question += 1
+
+		const lastIndex = qs[qs.length - 1].no
+		if (currentQuestion === lastIndex) {
+			test.test_status = 'completed'
+		}
 		//notify update
 		test.markModified('state')
 		await test.save()
