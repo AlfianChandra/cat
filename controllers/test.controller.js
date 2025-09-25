@@ -1786,7 +1786,7 @@ export const getValidationQuestion = async (req, res) => {
 				.json({ status: 200, message: 'Sesi sudah selesai', completed: true, data: null })
 		}
 
-		// const qMap = test.question_done
+		const qMap = test.question_done
 		// if (current >= qMap.length) {
 		// 	return res.status(200).json({
 		// 		status: 200,
@@ -1823,7 +1823,7 @@ export const getValidationQuestion = async (req, res) => {
 		})
 	} catch (err) {
 		console.error('Error fetching validation question:', err)
-		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server: ' + err })
+		return { status: 500, message: 'Terjadi kesalahan server' }
 	}
 }
 
