@@ -1854,6 +1854,8 @@ export const answerValidationQuestion = async (req, res) => {
 		const lastIndex = qs[qs.length - 1].no
 		if (currentQuestion === lastIndex) {
 			test.test_status = 'completed'
+		} else {
+			test.state.current_question = currentQuestion + 1
 		}
 		//notify update
 		test.markModified('state')
