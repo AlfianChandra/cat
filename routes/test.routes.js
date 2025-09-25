@@ -28,6 +28,7 @@ const {
 	getSescatDetail,
 	getTestData,
 	startValidation,
+	getValidationQuestion,
 } = await import('../controllers/test.controller.js')
 import { webmasterOnly, userOnly } from '../middlewares/restrictions.middleware.js'
 const router = express.Router()
@@ -56,6 +57,7 @@ router.post('/session/questioncat/detail', webmasterOnly, getSescatDetail)
 
 router.post('/data/get', userOnly, getTestData)
 router.post('/validation/start', userOnly, startValidation)
+router.post('/validation/question/get', userOnly, getValidationQuestion)
 
 // Recalculate participant answer correctness
 router.post('/session/fixanswers', webmasterOnly, fixParticipantAnswers)

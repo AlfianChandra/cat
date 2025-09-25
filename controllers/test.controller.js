@@ -1771,3 +1771,39 @@ export const getTestData = async (req, res) => {
 		return res.status(500).json({ message: err })
 	}
 }
+
+export const getValidationQuestion = async (req, res) => {
+	try {
+		const { current, id } = req.body
+		const test = await ValidationSession.findById(id)
+		if (!test) {
+			return { status: 404, message: 'Test tidak ditemukan' }
+		}
+
+		const qMap = test.question_done
+		const qMeta = qMap.find(q => q.no === current)
+
+		if (!qMeta) {
+			return { status: 404, message: 'Soal tidak ditemukan' }
+		}
+
+		const idQuestion = qMeta.id_question.toString()
+
+		const question = await Question.findById(idQuestion)
+		//remove kunci jawaban
+		if (!question) {
+			return { status: 404, message: 'Soal tidak ditemukan' }
+		}
+
+		//Remove kunci jawaban
+		question.answers = question.answers.map(a => ({
+			value: a.value,
+			id_answer: a.id_answer,
+		}))
+
+		return { status: 200, message: 'ok', data: question }
+	} catch (err) {
+		console.error('Error fetching validation question:', err)
+		return { status: 500, message: 'Terjadi kesalahan server' }
+	}
+}
