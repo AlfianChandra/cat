@@ -1823,7 +1823,7 @@ export const getValidationQuestion = async (req, res) => {
 		})
 	} catch (err) {
 		console.error('Error fetching validation question:', err)
-		return { status: 500, message: 'Terjadi kesalahan server' }
+		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server: ' + err })
 	}
 }
 
