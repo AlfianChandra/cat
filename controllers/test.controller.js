@@ -1836,8 +1836,6 @@ export const answerValidationQuestion = async (req, res) => {
 		test.markModified('question_done')
 		test.state.current_question += 1
 		//notify update
-		await test.save()
-		const newState = test.state
 		test.markModified('state')
 		await test.save()
 		return res.status(200).json({ status: 200, message: 'Jawaban berhasil disimpan', data: test })
