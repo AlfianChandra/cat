@@ -1801,7 +1801,11 @@ export const getValidationQuestion = async (req, res) => {
 			id_answer: a.id_answer,
 		}))
 
-		return { status: 200, message: 'ok', data: question }
+		return res.status(200).json({
+			status: 200,
+			message: 'ok',
+			data: question,
+		})
 	} catch (err) {
 		console.error('Error fetching validation question:', err)
 		return { status: 500, message: 'Terjadi kesalahan server' }
