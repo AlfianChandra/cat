@@ -1777,14 +1777,14 @@ export const getValidationQuestion = async (req, res) => {
 		const { current, id } = req.body
 		const test = await ValidationSession.findById(id)
 		if (!test) {
-			return { status: 404, message: 'Test tidak ditemukan' }
+			return res.status(404).json({ status: 404, message: 'Sesi tidak ditemukan' })
 		}
 
 		const qMap = test.question_done
 		const qMeta = qMap.find(q => q.no === current)
 
 		if (!qMeta) {
-			return { status: 404, message: 'Soal tidak ditemukan' }
+			return res.status(404).json({ status: 404, message: 'Soal tidak ditemukan' })
 		}
 
 		const idQuestion = qMeta.id_question.toString()
@@ -1792,7 +1792,7 @@ export const getValidationQuestion = async (req, res) => {
 		const question = await Question.findById(idQuestion)
 		//remove kunci jawaban
 		if (!question) {
-			return { status: 404, message: 'Soal tidak ditemukan' }
+			return res.status(404).json({ status: 404, message: 'Soal tidak ditemukan' })
 		}
 
 		//Remove kunci jawaban
