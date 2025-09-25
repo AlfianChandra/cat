@@ -1841,6 +1841,6 @@ export const answerValidationQuestion = async (req, res) => {
 		return res.status(200).json({ status: 200, message: 'Jawaban berhasil disimpan', data: test })
 	} catch (err) {
 		console.error('Error answering validation question:', err)
-		return { status: 500, message: 'Terjadi kesalahan server' }
+		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server: ' + err })
 	}
 }
