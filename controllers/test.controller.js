@@ -1811,3 +1811,38 @@ export const getValidationQuestion = async (req, res) => {
 		return { status: 500, message: 'Terjadi kesalahan server' }
 	}
 }
+
+export const answerValidationQuestion = async (req, res) => {
+	try {
+		const { id_question, id_test, answer } = req.body
+		const test = await ValidationSession.findById(id_test)
+		if (!test) {
+			return res.status(404).json({ status: 404, message: 'Sesi tidak ditemukan' })
+		}
+
+		const idAnswer = answer.id_answer
+		const question = await Question.findById(id_question)
+		const questionAnswer = question.answers.find(a => a.id_answer === idAnswer)
+		const isCorrect = questionAnswer.is_correct
+		const currentQuestion = test.state.current_question
+		const questionDone = test.question_done.find(q => q.no === currentQuestion)
+		if (!questionDone) {
+			return res.status(404).json({ status: 404, message: 'Soal tidak ditemukan di sesi' })
+		}
+
+		questionDone.answered = true
+		questionDone.correct = isCorrect
+		questionDone.id_answer = idAnswer
+		test.markModified('question_done')
+		test.state.current_question += 1
+		//notify update
+		await test.save()
+		const newState = test.state
+		test.markModified('state')
+		await test.save()
+		return res.status(200).json({ status: 200, message: 'Jawaban berhasil disimpan', data: test })
+	} catch (err) {
+		console.error('Error answering validation question:', err)
+		return { status: 500, message: 'Terjadi kesalahan server' }
+	}
+}
