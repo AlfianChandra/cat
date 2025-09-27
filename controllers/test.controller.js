@@ -1881,6 +1881,6 @@ export const getValidationHistory = async (req, res) => {
 		return res.status(200).json({ status: 200, message: 'ok', data: session })
 	} catch (err) {
 		console.error('Error fetching validation history:', err)
-		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
+		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server: ' + err })
 	}
 }
