@@ -1870,7 +1870,7 @@ export const answerValidationQuestion = async (req, res) => {
 export const getValidationHistory = async (req, res) => {
 	try {
 		const userId = req.user.id
-		const session = await ValidationSession.findOne({ id_user: userId }).sort({ start: -1 }).lean()
+		const session = await ValidationSession.find({ id_user: userId }).sort({ start: -1 }).lean()
 		const questionCat = await QuestionCat.find()
 		for (const s of session) {
 			const idCat = s.id_category.toString()
