@@ -1866,3 +1866,21 @@ export const answerValidationQuestion = async (req, res) => {
 		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server: ' + err })
 	}
 }
+
+export const getValidationHistory = async (req, res) => {
+	try {
+		const userId = req.user.id
+		const session = await ValidationSession.findOne({ id_user: userId }).sort({ start: -1 }).lean()
+		const questionCat = await QuestionCat.find()
+		for (const s of session) {
+			const idCat = s.id_category.toString()
+			const catData = questionCat.find(q => q._id.toString() === idCat)
+			s.category_data = catData || null
+		}
+
+		return res.status(200).json({ status: 200, message: 'ok', data: session })
+	} catch (err) {
+		console.error('Error fetching validation history:', err)
+		return res.status(500).json({ status: 500, message: 'Terjadi kesalahan server' })
+	}
+}

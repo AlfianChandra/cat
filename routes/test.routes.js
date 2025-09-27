@@ -30,6 +30,7 @@ const {
 	startValidation,
 	getValidationQuestion,
 	answerValidationQuestion,
+	getValidationHistory,
 } = await import('../controllers/test.controller.js')
 import { webmasterOnly, userOnly } from '../middlewares/restrictions.middleware.js'
 const router = express.Router()
@@ -60,6 +61,7 @@ router.post('/data/get', userOnly, getTestData)
 router.post('/validation/start', userOnly, startValidation)
 router.post('/validation/question/get', userOnly, getValidationQuestion)
 router.post('/validation/question/answer', userOnly, answerValidationQuestion)
+router.get('/validation/history', userOnly, getValidationHistory)
 
 // Recalculate participant answer correctness
 router.post('/session/fixanswers', webmasterOnly, fixParticipantAnswers)
