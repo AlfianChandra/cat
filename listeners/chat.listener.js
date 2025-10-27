@@ -48,6 +48,7 @@ registry
 					// Loop untuk setiap chunk stream
 					for await (const chunk of stream) {
 						// Cek apakah ada content text di chunk
+						console.log(chunk)
 						if (chunk?.output?.[0]?.content) {
 							for (const content of chunk.output[0].content) {
 								if (content.type === 'text' && content.text) {
