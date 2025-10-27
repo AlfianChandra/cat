@@ -32,35 +32,39 @@ registry
 			socket.on('chatbot:client_chat', async data => {
 				try {
 					const { assistant_options: options, conversation } = data
-					const input = formatConvo(options, conversation) // Pass full options, bukan cuma memory
+					const messages = formatConvoForChat(options, conversation)
 
-					console.log('Input:', input)
+					console.log('Messages:', messages)
 
-					// Create streaming response
-					const stream = await openai.responses.stream({
+					// Pake Chat Completions dengan streaming
+					const stream = await openai.chat.completions.create({
 						model: options.model || 'gpt-4o-mini',
 						temperature: options.temperature ?? 0.7,
-						input,
+						messages,
+						stream: true,
 					})
 
 					let fullResponse = ''
 
-					// Loop untuk setiap chunk stream
+					// Loop setiap chunk
 					for await (const chunk of stream) {
-						console.log(chunk)
-						if (chunk.type === 'response.output_text.delta') {
-							const delta = chunk.delta
+						const delta = chunk.choices[0]?.delta?.content || ''
+
+						if (delta) {
+							fullResponse += delta
+
 							socket.emit('chatbot:completion_respond', {
 								data: {
 									content: delta,
 								},
 								error: false,
 							})
-							fullResponse += delta
+
+							console.log('Streaming chunk:', delta)
 						}
 					}
 
-					// Emit signal bahwa streaming sudah selesai
+					// Signal selesai
 					socket.emit('chatbot:completion_respond_end', {
 						data: {
 							content: fullResponse,
@@ -72,7 +76,6 @@ registry
 				} catch (error) {
 					console.error('💀 Error in chatbot handler:', error)
 
-					// Emit error ke frontend
 					socket.emit('chatbot:completion_respond_end', {
 						message: error.message,
 						error: true,
@@ -90,71 +93,59 @@ registry
 	})
 
 // Update formatConvo buat inject system prompt
-const formatConvo = (options, conversation) => {
+const formatConvoForChat = (options, conversation) => {
 	const memoryLimit = options.memory
 	const lastKnownConvo = conversation.slice(-memoryLimit)
 
-	// Inject system prompt di awal
-	const systemMessage = {
-		role: 'system',
-		content: [
-			{
-				type: 'output_text',
-				text: options.prompt.trim(),
-			},
-		],
-	}
+	// System prompt di awal
+	const messages = [
+		{
+			role: 'system',
+			content: options.prompt.trim(),
+		},
+	]
 
-	// Format conversation messages
-	const formattedConvo = lastKnownConvo.map(msg => {
-		const isUser = msg.role === 'user'
-
+	// Mapping conversation
+	lastKnownConvo.forEach(msg => {
 		if (msg.media == null) {
-			return {
+			// Simple text message
+			messages.push({
 				role: msg.role,
-				content: isUser
-					? msg.message // user bisa langsung string
-					: [
-							{
-								type: 'output_text',
-								text: msg.message,
-							},
-						],
-			}
+				content: msg.message,
+			})
 		} else {
-			// Kalau ada media
-			let structure = []
+			// Message dengan media
+			const contentArray = []
 
 			msg.media.forEach(media => {
 				if (media.type === 'image') {
-					structure.push({
-						type: 'input_image',
-						image_url: media.data,
+					contentArray.push({
+						type: 'image_url',
+						image_url: {
+							url: media.data,
+						},
 					})
 				} else {
-					structure.push({
-						type: isUser ? 'input_text' : 'output_text',
-						text: `Berikut adalah data hasil ekstraksi dari file ${
-							media.type
-						} bernama ${media.name}: ${media.markdown == undefined ? media.data : media.markdown}`,
+					contentArray.push({
+						type: 'text',
+						text: `Berikut adalah data hasil ekstraksi dari file ${media.type} bernama ${media.name}: ${media.markdown || media.data}`,
 					})
 				}
 			})
 
-			structure.push({
-				type: isUser ? 'input_text' : 'output_text',
+			contentArray.push({
+				type: 'text',
 				text: msg.message,
 			})
 
-			return {
+			messages.push({
 				role: msg.role,
-				content: structure,
-			}
+				content: contentArray,
+			})
 		}
 	})
 
-	// Return dengan system prompt di depan
-	return [systemMessage, ...formattedConvo]
+	return messages
 }
 
 async function getOpenAIInstance() {
