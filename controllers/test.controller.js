@@ -1303,7 +1303,12 @@ export const getParticipantsByInstance = async (req, res) => {
 
 			// Hitung benar/salah cuma dari question_done.isCorrect
 			for (const q of sess.question_done || []) {
-				const name = (sess.payload || []).find(p => p.level === q.level)?.name || `Level ${q.level}`
+				// FIX: Cek dulu apakah q.level valid
+				if (q.level == null) continue // Skip kalau level undefined/null
+
+				const pack = (sess.payload || []).find(p => p.level === q.level)
+				const name = pack?.name || `Level ${q.level}`
+
 				if (!answers[name]) {
 					answers[name] = { correct: 0, incorrect: 0, indicator_name: name }
 				}
