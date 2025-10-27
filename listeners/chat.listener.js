@@ -41,6 +41,7 @@ registry
 						model: options.model,
 						temperature: options.temperature,
 						input,
+						stream: true,
 					})
 
 					// Handle streaming chunks
