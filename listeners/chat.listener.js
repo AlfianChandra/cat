@@ -32,7 +32,7 @@ registry
 			socket.on('chatbot:client_chat', async data => {
 				try {
 					const { assistant_options: options, conversation } = data
-					const input = formatConvo(options.memory, conversation)
+					const input = formatConvo(options, conversation) // Pass full options, bukan cuma memory
 
 					console.log('Input:', input)
 
@@ -47,7 +47,6 @@ registry
 
 					// Loop untuk setiap chunk stream
 					for await (const chunk of stream) {
-						// Cek apakah ada content text di chunk
 						console.log(chunk)
 						if (chunk.type === 'response.output_text.delta') {
 							const delta = chunk.delta
@@ -59,24 +58,6 @@ registry
 							})
 							fullResponse += delta
 						}
-						// if (chunk?.output?.[0]?.content) {
-						// 	for (const content of chunk.output[0].content) {
-						// 		if (content.type === 'text' && content.text) {
-						// 			const textChunk = content.text
-						// 			fullResponse += textChunk
-
-						// 			// Emit chunk ke frontend dengan format yang sesuai
-						// 			socket.emit('chatbot:completion_respond', {
-						// 				data: {
-						// 					content: textChunk,
-						// 				},
-						// 				error: false,
-						// 			})
-
-						// 			console.log('Streaming chunk:', textChunk)
-						// 		}
-						// 	}
-						// }
 					}
 
 					// Emit signal bahwa streaming sudah selesai
@@ -108,22 +89,34 @@ registry
 		console.error('[CHAT] Failed to initialize chat namespace:', error)
 	})
 
-const formatConvo = (memory, conversation) => {
-	const memoryLimit = memory
+// Update formatConvo buat inject system prompt
+const formatConvo = (options, conversation) => {
+	const memoryLimit = options.memory
 	const lastKnownConvo = conversation.slice(-memoryLimit)
 
-	const convo = lastKnownConvo.map(msg => {
-		// Tentukan content type berdasarkan role
+	// Inject system prompt di awal
+	const systemMessage = {
+		role: 'system',
+		content: [
+			{
+				type: 'output_text',
+				text: options.prompt.trim(),
+			},
+		],
+	}
+
+	// Format conversation messages
+	const formattedConvo = lastKnownConvo.map(msg => {
 		const isUser = msg.role === 'user'
 
 		if (msg.media == null) {
 			return {
 				role: msg.role,
 				content: isUser
-					? msg.message
+					? msg.message // user bisa langsung string
 					: [
 							{
-								type: 'output_text', // untuk assistant/system
+								type: 'output_text',
 								text: msg.message,
 							},
 						],
@@ -160,7 +153,8 @@ const formatConvo = (memory, conversation) => {
 		}
 	})
 
-	return convo
+	// Return dengan system prompt di depan
+	return [systemMessage, ...formattedConvo]
 }
 
 async function getOpenAIInstance() {
