@@ -53,6 +53,10 @@ export const useAuthVerifier = (req, res, next) => {
 						return res
 							.status(401)
 							.json({ status: 401, message: 'verification failed - token expired' })
+					} else {
+						return res
+							.status(401)
+							.json({ status: 401, message: 'verification failed - user not found' })
 					}
 				} else if (err.name === 'JsonWebTokenError') {
 					console.log('50: AuthVerifier -> Token verification failed: ', err.message)
