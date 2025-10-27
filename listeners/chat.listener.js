@@ -101,19 +101,27 @@ registry
 const formatConvo = (memory, conversation) => {
 	const memoryLimit = memory
 	const lastKnownConvo = conversation.slice(-memoryLimit)
+
 	const convo = lastKnownConvo.map(msg => {
+		// Tentukan content type berdasarkan role
+		const isUser = msg.role === 'user'
+
 		if (msg.media == null) {
 			return {
 				role: msg.role,
-				content: [
-					{
-						type: 'input_text',
-						text: msg.message,
-					},
-				],
+				content: isUser
+					? msg.message
+					: [
+							{
+								type: 'output_text', // untuk assistant/system
+								text: msg.message,
+							},
+						],
 			}
 		} else {
+			// Kalau ada media
 			let structure = []
+
 			msg.media.forEach(media => {
 				if (media.type === 'image') {
 					structure.push({
@@ -122,7 +130,7 @@ const formatConvo = (memory, conversation) => {
 					})
 				} else {
 					structure.push({
-						type: 'input_text',
+						type: isUser ? 'input_text' : 'output_text',
 						text: `Berikut adalah data hasil ekstraksi dari file ${
 							media.type
 						} bernama ${media.name}: ${media.markdown == undefined ? media.data : media.markdown}`,
@@ -131,7 +139,7 @@ const formatConvo = (memory, conversation) => {
 			})
 
 			structure.push({
-				type: 'input_text',
+				type: isUser ? 'input_text' : 'output_text',
 				text: msg.message,
 			})
 
