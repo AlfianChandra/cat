@@ -31,69 +31,42 @@ registry
 
 			socket.on('chatbot:client_chat', async data => {
 				try {
-					const options = data.assistant_options
-					let input = formatConvo(options.memory, data.conversation)
-					console.log(input)
-					// Call pertama
-					let response = await openai.responses.create({
+					const { assistant_options: options, conversation } = data
+					const input = formatConvo(options.memory, conversation)
+
+					console.log('Input:', input)
+
+					// Streaming response
+					const stream = await openai.responses.stream({
 						model: options.model,
 						temperature: options.temperature,
 						input,
-						tools,
 					})
 
-					// Handle function calls jika ada
-					let hasFunction = false
-					for (const item of response.output) {
-						if (item.type === 'function_call') {
-							hasFunction = true
-							if (item.name === 'get_participantreport') {
-								try {
-									const args = JSON.parse(item.arguments)
-									const result = await fcGetParticipantReport(args)
-									input.push({
-										type: 'function_call_output',
-										call_id: item.call_id,
-										output: JSON.stringify(result),
-									})
-								} catch (error) {
-									console.error('Error executing function call:', error)
-									input.push({
-										type: 'function_call_output',
-										call_id: item.call_id,
-										output: JSON.stringify({ error: 'Function execution failed' }),
-									})
-								}
-							}
-						}
-					}
-
-					let finalResponse = response
-
-					// Call kedua hanya jika ada function call
-					if (hasFunction) {
-						console.log('Function call detected, making second API call...')
-						console.log('Updated input:', input)
-
-						finalResponse = await openai.responses.create({
-							model: options.model,
-							temperature: options.temperature, // Tambahkan temperature juga
-							input,
-							tools, // Mungkin perlu tools juga untuk konsistensi
+					// Handle streaming chunks
+					for await (const chunk of stream) {
+						// Emit setiap chunk ke client real-time
+						socket.emit('chatbot:server_stream', {
+							chunk: chunk.output,
+							done: false,
 						})
 
-						console.log('Second response output:', finalResponse.output)
+						console.log('Streaming chunk:', chunk.output)
 					}
 
-					// Emit response ke client
+					// Emit final response setelah streaming selesai
+					const finalResponse = await stream.finalResponse()
+
 					socket.emit('chatbot:server_response', {
 						response: finalResponse.output,
 						success: true,
+						done: true,
 					})
 				} catch (error) {
-					console.error('[CHAT] Error processing message:', error)
+					console.error('Error in chatbot handler:', error)
+
 					socket.emit('chatbot:server_response', {
-						error: 'Failed to process message',
+						error: error.message,
 						success: false,
 					})
 				}
