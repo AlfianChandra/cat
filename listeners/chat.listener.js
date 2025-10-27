@@ -37,7 +37,7 @@ registry
 					console.log('Input:', input)
 
 					// Streaming response
-					const stream = await openai.responses.stream({
+					const stream = await openai.responses.create({
 						model: options.model,
 						temperature: options.temperature,
 						input,
@@ -46,7 +46,7 @@ registry
 					// Handle streaming chunks
 					for await (const chunk of stream) {
 						// Emit setiap chunk ke client real-time
-						socket.emit('chatbot:server_stream', {
+						socket.emit('chatbot:completion_respond', {
 							chunk: chunk.output,
 							done: false,
 						})
