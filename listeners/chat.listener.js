@@ -49,24 +49,34 @@ registry
 					for await (const chunk of stream) {
 						// Cek apakah ada content text di chunk
 						console.log(chunk)
-						if (chunk?.output?.[0]?.content) {
-							for (const content of chunk.output[0].content) {
-								if (content.type === 'text' && content.text) {
-									const textChunk = content.text
-									fullResponse += textChunk
-
-									// Emit chunk ke frontend dengan format yang sesuai
-									socket.emit('chatbot:completion_respond', {
-										data: {
-											content: textChunk,
-										},
-										error: false,
-									})
-
-									console.log('Streaming chunk:', textChunk)
-								}
-							}
+						if (chunk.type === 'response.output_text.delta') {
+							const delta = chunk.delta
+							socket.emit('chatbot:completion_respond', {
+								data: {
+									content: delta,
+								},
+								error: false,
+							})
+							fullResponse += delta
 						}
+						// if (chunk?.output?.[0]?.content) {
+						// 	for (const content of chunk.output[0].content) {
+						// 		if (content.type === 'text' && content.text) {
+						// 			const textChunk = content.text
+						// 			fullResponse += textChunk
+
+						// 			// Emit chunk ke frontend dengan format yang sesuai
+						// 			socket.emit('chatbot:completion_respond', {
+						// 				data: {
+						// 					content: textChunk,
+						// 				},
+						// 				error: false,
+						// 			})
+
+						// 			console.log('Streaming chunk:', textChunk)
+						// 		}
+						// 	}
+						// }
 					}
 
 					// Emit signal bahwa streaming sudah selesai
