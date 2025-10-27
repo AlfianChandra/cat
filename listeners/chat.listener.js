@@ -33,7 +33,7 @@ registry
 				try {
 					const options = data.assistant_options
 					let input = formatConvo(options.memory, data.conversation)
-
+					console.log(input)
 					// Call pertama
 					let response = await openai.responses.create({
 						model: options.model,
