@@ -43,37 +43,47 @@ registry
 						input,
 					})
 
+					let fullResponse = ''
+
 					// Loop untuk setiap chunk stream
 					for await (const chunk of stream) {
-						const textChunk = chunk?.output?.[0]?.content?.[0]?.text || ''
+						// Cek apakah ada content text di chunk
+						if (chunk?.output?.[0]?.content) {
+							for (const content of chunk.output[0].content) {
+								if (content.type === 'text' && content.text) {
+									const textChunk = content.text
+									fullResponse += textChunk
 
-						if (textChunk.trim().length > 0) {
-							socket.emit('chatbot:completion_respond', {
-								chunk: textChunk,
-								done: false,
-							})
+									// Emit chunk ke frontend dengan format yang sesuai
+									socket.emit('chatbot:completion_respond', {
+										data: {
+											content: textChunk,
+										},
+										error: false,
+									})
 
-							console.log('Streaming chunk:', textChunk)
+									console.log('Streaming chunk:', textChunk)
+								}
+							}
 						}
 					}
 
-					// Ambil final response setelah selesai stream
-					const final = await stream.finalMessage()
-					const finalText = final?.output?.[0]?.content?.[0]?.text || ''
-
-					socket.emit('chatbot:server_response', {
-						response: finalText,
-						success: true,
-						done: true,
+					// Emit signal bahwa streaming sudah selesai
+					socket.emit('chatbot:completion_respond_end', {
+						data: {
+							content: fullResponse,
+						},
+						error: false,
 					})
 
 					console.log('✅ Stream complete.')
 				} catch (error) {
 					console.error('💀 Error in chatbot handler:', error)
 
-					socket.emit('chatbot:server_response', {
-						error: error.message,
-						success: false,
+					// Emit error ke frontend
+					socket.emit('chatbot:completion_respond_end', {
+						message: error.message,
+						error: true,
 					})
 				}
 			})
