@@ -36,35 +36,40 @@ registry
 
 					console.log('Input:', input)
 
-					// Streaming response
-					const stream = await openai.responses.create({
-						model: options.model,
-						temperature: options.temperature,
+					// Create streaming response
+					const stream = await openai.responses.stream({
+						model: options.model || 'gpt-4o-mini',
+						temperature: options.temperature ?? 0.7,
 						input,
-						stream: true,
 					})
 
-					// Handle streaming chunks
+					// Loop untuk setiap chunk stream
 					for await (const chunk of stream) {
-						// Emit setiap chunk ke client real-time
-						socket.emit('chatbot:completion_respond', {
-							chunk: chunk.output,
-							done: false,
-						})
+						const textChunk = chunk?.output?.[0]?.content?.[0]?.text || ''
 
-						console.log('Streaming chunk:', chunk.output)
+						if (textChunk.trim().length > 0) {
+							socket.emit('chatbot:completion_respond', {
+								chunk: textChunk,
+								done: false,
+							})
+
+							console.log('Streaming chunk:', textChunk)
+						}
 					}
 
-					// Emit final response setelah streaming selesai
-					const finalResponse = await stream.finalResponse()
+					// Ambil final response setelah selesai stream
+					const final = await stream.finalMessage()
+					const finalText = final?.output?.[0]?.content?.[0]?.text || ''
 
 					socket.emit('chatbot:server_response', {
-						response: finalResponse.output,
+						response: finalText,
 						success: true,
 						done: true,
 					})
+
+					console.log('✅ Stream complete.')
 				} catch (error) {
-					console.error('Error in chatbot handler:', error)
+					console.error('💀 Error in chatbot handler:', error)
 
 					socket.emit('chatbot:server_response', {
 						error: error.message,
