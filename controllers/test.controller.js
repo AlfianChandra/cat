@@ -1033,7 +1033,12 @@ export const getTestReport = async (req, res) => {
 
 			for (const q of questionDone) {
 				const level = q.level
+
+				// FIX: Skip kalau level invalid
+				if (level == null) continue
+
 				const name = cats.find(cat => cat.level === level)?.name || `Level ${level}`
+
 				if (!result[name]) {
 					result[name] = {
 						correct: q.isCorrect ? 1 : 0,
@@ -1101,7 +1106,14 @@ export const getTestReport = async (req, res) => {
 
 				for (const q of session.question_done || []) {
 					const level = q.level
-					const name = cats.find(cat => cat.level === level)?.name || `Level ${level}`
+
+					// FIX: Skip kalau level invalid
+					if (level == null) continue
+
+					const name =
+						cats.find(cat => cat.level === level)?.name ||
+						(level != null ? `Level ${level}` : 'Tanpa Level')
+
 					if (!instanceResults[instanceName].data[name]) {
 						instanceResults[instanceName].data[name] = {
 							correct: 0,
