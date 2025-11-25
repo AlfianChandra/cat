@@ -1013,7 +1013,10 @@ export const getTestReport = async (req, res) => {
 
 		let result = {}
 		for (const cat of categories) {
-			const name = cat.name || `Level ${cat.level}`
+			// Skip kalau ga ada name
+			if (!cat.name) continue
+
+			const name = cat.name
 			result[name] = {
 				correct: 0,
 				incorrect: 0,
@@ -1033,12 +1036,11 @@ export const getTestReport = async (req, res) => {
 
 			for (const q of questionDone) {
 				const level = q.level
+				const foundCat = cats.find(cat => cat.level === level)
+				// Skip kalau ga ada name
+				if (!foundCat?.name) continue
 
-				// FIX: Skip kalau level invalid
-				if (level == null) continue
-
-				const name = cats.find(cat => cat.level === level)?.name || `Level ${level}`
-
+				const name = foundCat.name
 				if (!result[name]) {
 					result[name] = {
 						correct: q.isCorrect ? 1 : 0,
@@ -1094,7 +1096,10 @@ export const getTestReport = async (req, res) => {
 					allParticipants.find(part => part._id.toString() === partId) || null,
 				)
 				for (const cat of cats) {
-					const name = cat.name || `Level ${cat.level}`
+					// Skip kalau ga ada name
+					if (!cat.name) continue
+
+					const name = cat.name
 					if (!instanceResults[instanceName].data[name]) {
 						instanceResults[instanceName].data[name] = {
 							correct: 0,
@@ -1106,14 +1111,11 @@ export const getTestReport = async (req, res) => {
 
 				for (const q of session.question_done || []) {
 					const level = q.level
+					const foundCat = cats.find(cat => cat.level === level)
+					// Skip kalau ga ada name
+					if (!foundCat?.name) continue
 
-					// FIX: Skip kalau level invalid
-					if (level == null) continue
-
-					const name =
-						cats.find(cat => cat.level === level)?.name ||
-						(level != null ? `Level ${level}` : 'Tanpa Level')
-
+					const name = foundCat.name
 					if (!instanceResults[instanceName].data[name]) {
 						instanceResults[instanceName].data[name] = {
 							correct: 0,
@@ -1133,6 +1135,7 @@ export const getTestReport = async (req, res) => {
 		//Get results by materi
 		const mMateries = await Materi.find()
 		const mQuestions = await Question.find()
+		const mSessions = await TestSession
 		let mMateriesQResult = []
 
 		for (const mtr of mMateries) {
