@@ -1312,17 +1312,23 @@ export const getParticipantsByInstance = async (req, res) => {
 		for (const sess of userSessions) {
 			const answers = {}
 			for (const pack of sess.payload || []) {
-				const name = pack?.name || (pack?.level != null ? `Level ${pack.level}` : 'Tanpa Kategori')
+				// Skip kalau ga ada name
+				if (!pack?.name) continue
+
+				const name = pack.name
 				answers[name] = { correct: 0, incorrect: 0, indicator_name: name }
 			}
 
 			// Hitung benar/salah cuma dari question_done.isCorrect
 			for (const q of sess.question_done || []) {
-				// FIX: Cek dulu apakah q.level valid
-				if (q.level == null) continue // Skip kalau level undefined/null
+				// Skip kalau level undefined/null
+				if (q.level == null) continue
 
 				const pack = (sess.payload || []).find(p => p.level === q.level)
-				const name = pack?.name || `Level ${q.level}`
+				// Skip kalau ga ada name
+				if (!pack?.name) continue
+
+				const name = pack.name
 
 				if (!answers[name]) {
 					answers[name] = { correct: 0, incorrect: 0, indicator_name: name }
