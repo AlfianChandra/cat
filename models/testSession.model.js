@@ -19,11 +19,11 @@ const testSessionSchema = new mongoose.Schema({
 		type: Date,
 		required: true,
 	},
-	test_token: {
-		type: String,
-		required: true,
-		unique: true,
-	},
+	// test_token: {
+	// 	type: String,
+	// 	required: false,
+	// 	unique: false,
+	// },
 	payload: {
 		type: Array,
 		required: true,
